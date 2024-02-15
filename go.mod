@@ -1,9 +1,8 @@
 module github.com/bjartek/underflow
 
-go 1.21
+go 1.20
 
 require (
-	github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de
 	github.com/fatih/structtag v1.2.0
 	github.com/hexops/autogold v1.3.1
 	github.com/onflow/cadence v0.42.9

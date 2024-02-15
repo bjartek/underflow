@@ -12,9 +12,23 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-// CadenceValueToJsonString converts a cadence.Value into a json pretty printed string
+type Options struct {
+	IncludeEmptyValues   bool
+	WrapWithComplexTypes bool
+}
+
+var defaultOptions = Options{
+	IncludeEmptyValues:   false,
+	WrapWithComplexTypes: false,
+}
+
 func CadenceValueToJsonString(value cadence.Value) (string, error) {
-	result := CadenceValueToInterface(value)
+	return CadenceValueToJsonStringWithOption(value, defaultOptions)
+}
+
+// CadenceValueToJsonString converts a cadence.Value into a json pretty printed string
+func CadenceValueToJsonStringWithOption(value cadence.Value, opt Options) (string, error) {
+	result := CadenceValueToInterfaceWithOption(value, opt)
 	if result == nil {
 		return "", nil
 	}
@@ -81,25 +95,32 @@ func ExtractAddresses(field cadence.Value) []string {
 
 // CadenceValueToInterface convert a candence.Value into interface{}
 func CadenceValueToInterface(field cadence.Value) interface{} {
+	return CadenceValueToInterfaceWithOption(field, defaultOptions)
+}
+
+func CadenceValueToInterfaceWithOption(field cadence.Value, opt Options) interface{} {
 	if field == nil {
 		return nil
 	}
 
 	switch field := field.(type) {
 	case cadence.Optional:
-		return CadenceValueToInterface(field.Value)
+		return CadenceValueToInterfaceWithOption(field.Value, opt)
 	case cadence.Dictionary:
 		// fmt.Println("is dict ", field.ToGoValue(), " ", field.String())
 		result := map[string]interface{}{}
 		for _, item := range field.Pairs {
-			value := CadenceValueToInterface(item.Value)
+			value := CadenceValueToInterfaceWithOption(item.Value, opt)
 			key := getAndUnquoteString(item.Key)
 
-			if value != nil && key != "" {
-				result[key] = value
+			if key != "" {
+				if value != nil || opt.IncludeEmptyValues {
+					result[key] = value
+				}
 			}
 		}
-		if len(result) == 0 {
+
+		if len(result) == 0 && !opt.IncludeEmptyValues {
 			return nil
 		}
 		return result
@@ -109,29 +130,36 @@ func CadenceValueToInterface(field cadence.Value) interface{} {
 		subStructNames := field.StructType.Fields
 
 		for j, subField := range field.Fields {
-			value := CadenceValueToInterface(subField)
+			value := CadenceValueToInterfaceWithOption(subField, opt)
 			key := subStructNames[j].Identifier
 
 			//	fmt.Println("struct ", key, "value", value)
-			if value != nil {
+			if value != nil || opt.IncludeEmptyValues {
 				result[key] = value
 			}
 		}
-		if len(result) == 0 {
+		if len(result) == 0 && !opt.IncludeEmptyValues {
 			return nil
 		}
-		return result
+
+		if !opt.WrapWithComplexTypes {
+			return result
+		}
+
+		return map[string]interface{}{
+			fmt.Sprintf("<%s>", field.StructType.ID()): result,
+		}
 	case cadence.Array:
 		// fmt.Println("is array ", field.ToGoValue(), " ", field.String())
 		var result []interface{}
 		for _, item := range field.Values {
-			value := CadenceValueToInterface(item)
+			value := CadenceValueToInterfaceWithOption(item, opt)
 			//	fmt.Printf("%+v\n", value)
-			if value != nil {
+			if value != nil || opt.IncludeEmptyValues {
 				result = append(result, value)
 			}
 		}
-		if len(result) == 0 {
+		if len(result) == 0 && !opt.IncludeEmptyValues {
 			return nil
 		}
 		return result
@@ -146,7 +174,7 @@ func CadenceValueToInterface(field cadence.Value) interface{} {
 	case cadence.String:
 		// fmt.Println("is string ", field.ToGoValue(), " ", field.String())
 		value := getAndUnquoteString(field)
-		if value == "" {
+		if value == "" && !opt.IncludeEmptyValues {
 			return nil
 		}
 		return value
@@ -163,13 +191,19 @@ func CadenceValueToInterface(field cadence.Value) interface{} {
 		result := map[string]interface{}{}
 
 		for i, subField := range field.Fields {
-			value := CadenceValueToInterface(subField)
-			if value != nil {
+			value := CadenceValueToInterfaceWithOption(subField, opt)
+			if value != nil || opt.IncludeEmptyValues {
 				result[field.EventType.Fields[i].Identifier] = value
 			}
 		}
 
-		return result
+		if !opt.WrapWithComplexTypes {
+			return result
+		}
+
+		return map[string]interface{}{
+			fmt.Sprintf("<%s>", field.EventType.ID()): result,
+		}
 
 	case cadence.Resource:
 
@@ -178,25 +212,33 @@ func CadenceValueToInterface(field cadence.Value) interface{} {
 		subStructNames := field.ResourceType.Fields
 
 		for j, subField := range field.Fields {
-			value := CadenceValueToInterface(subField)
+			value := CadenceValueToInterfaceWithOption(subField, opt)
 			key := subStructNames[j].Identifier
 
 			//	fmt.Println("struct ", key, "value", value)
-			if value != nil {
+			if value != nil || opt.IncludeEmptyValues {
 				fields[key] = value
 			}
 		}
 
+		if !opt.WrapWithComplexTypes {
+			return fields
+		}
+
 		return map[string]interface{}{
-			field.ResourceType.ID(): fields,
+			fmt.Sprintf("<@%s>", field.ResourceType.ID()): fields,
 		}
 	case cadence.PathCapability:
 
+		fields := map[string]interface{}{
+			"address": CadenceValueToInterfaceWithOption(field.Address, opt),
+			"path":    CadenceValueToInterfaceWithOption(field.Path, opt),
+		}
+		if !opt.WrapWithComplexTypes {
+			return fields
+		}
 		return map[string]interface{}{
-			fmt.Sprintf("Capability<%s>", field.BorrowType.ID()): map[string]interface{}{
-				"address": CadenceValueToInterface(field.Address),
-				"path":    CadenceValueToInterface(field.Path),
-			},
+			fmt.Sprintf("<Capability<%s>>", field.BorrowType.ID()): fields,
 		}
 	default:
 		// fmt.Println("is fallthrough ", field.ToGoValue(), " ", field.String())

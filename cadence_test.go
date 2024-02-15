@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math"
 	"testing"
 
 	"github.com/hexops/autogold"
@@ -13,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type Cadencetest struct {
+type CadenceTest struct {
 	want  autogold.Value
 	input cadence.Value
 }
@@ -84,15 +85,24 @@ func TestCadenceValueToInterface(t *testing.T) {
 	ufix, _ := cadence.NewUFix64("42.0")
 	fix, _ := cadence.NewFix64("-2.0")
 
-	testCases := []Cadencetest{
+	largeUfix, _ := cadence.NewUFix64("184467440737.0")
+	smallfix, _ := cadence.NewFix64("-92233720368.5")
+	largefix, _ := cadence.NewFix64("92233720368.5")
+	var ui64 uint64 = math.MaxUint64
+
+	testCases := []CadenceTest{
 		{autogold.Want("EmptyString", nil), cadenceString("")},
 		{autogold.Want("nil", nil), nil},
 		{autogold.Want("None", nil), cadence.NewOptional(nil)},
 		{autogold.Want("Some(string)", "foo"), cadence.NewOptional(foo)},
 		{autogold.Want("Some(uint64)", uint64(42)), cadence.NewOptional(cadence.NewUInt64(42))},
 		{autogold.Want("uint64", uint64(42)), cadence.NewUInt64(42)},
+		{autogold.Want("max uint64", ui64), cadence.NewUInt64(ui64)},
 		{autogold.Want("ufix64", float64(42.0)), ufix},
+		{autogold.Want("large_ufix64", float64(1.84467440737e+11)), largeUfix},
 		{autogold.Want("fix64", float64(-2.0)), fix},
+		{autogold.Want("small_fix64", float64(-9.22337203685e+10)), smallfix},
+		{autogold.Want("large_fix64", float64(9.22337203685e+10)), largefix},
 		{autogold.Want("uint32", uint32(42)), cadence.NewUInt32(42)},
 		{autogold.Want("int", 42), cadence.NewInt(42)},
 		{autogold.Want("string array", []interface{}{"foo", "bar"}), cadence.NewArray([]cadence.Value{foo, bar})},
@@ -110,8 +120,8 @@ func TestCadenceValueToInterface(t *testing.T) {
 		{autogold.Want("EmojiDict", map[string]interface{}{"😁": "😁"}), emojiDict},
 		{autogold.Want("StoragePath", "/storage/foo"), path},
 		{autogold.Want("Event", map[string]interface{}{"foo": "foo"}), cadenceEvent},
-		{autogold.Want("PathCapablity", map[string]interface{}{"Capability<String>": map[string]interface{}{"address": "0xf8d6e0586b0a20c7", "path": "/storage/foo"}}), pathCap},
-		{autogold.Want("Resource", map[string]interface{}{"A.f8d6e0586b0a20c7.Contract.Resource": map[string]interface{}{"foo": "foo"}}), resource},
+		{autogold.Want("PathCapablity", map[string]interface{}{"address": "0xf8d6e0586b0a20c7", "path": "/storage/foo"}), pathCap},
+		{autogold.Want("Resource", map[string]interface{}{"foo": "foo"}), resource},
 	}
 
 	for _, tc := range testCases {
@@ -262,7 +272,7 @@ func TestExtractAddresses(t *testing.T) {
 		Fields:     []cadence.Value{address},
 		StructType: &structType,
 	}
-	testCases := []Cadencetest{
+	testCases := []CadenceTest{
 		{autogold.Want("Address", []string{"0xf8d6e0586b0a20c7"}), address},
 		{autogold.Want("OptAddress", []string{"0xf8d6e0586b0a20c7"}), opt},
 		{autogold.Want("Dict", []string{"0xf8d6e0586b0a20c7", "0x01cf0e2f2f715450"}), dict},
@@ -273,6 +283,110 @@ func TestExtractAddresses(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.want.Name(), func(t *testing.T) {
 			value := ExtractAddresses(tc.input)
+			tc.want.Equal(t, value)
+		})
+	}
+}
+
+func TestIncludeEmptyValues(t *testing.T) {
+	dict := cadence.NewDictionary([]cadence.KeyValuePair{{Key: cadenceString("foo"), Value: cadenceString("")}})
+	array := cadence.NewArray([]cadence.Value{cadenceString("foo"), cadenceString(""), cadenceString("bar")})
+	structType := cadence.StructType{
+		QualifiedIdentifier: "Contract.Bar",
+		Fields: []cadence.Field{{
+			Identifier: "foo",
+			Type:       cadence.StringType{},
+		}},
+	}
+
+	strct := cadence.Struct{
+		Fields:     []cadence.Value{cadenceString("")},
+		StructType: &structType,
+	}
+
+	cadenceEvent := cadence.NewEvent([]cadence.Value{cadenceString("")}).WithType(&cadence.EventType{
+		QualifiedIdentifier: "TestEvent",
+		Fields: []cadence.Field{{
+			Type:       cadence.StringType{},
+			Identifier: "foo",
+		}},
+	},
+	)
+
+	testCases := []CadenceTest{
+		{autogold.Want("Dict", map[string]interface{}{"foo": ""}), dict},
+		{autogold.Want("Array", []interface{}{"foo", "", "bar"}), array},
+		{autogold.Want("Struct", map[string]interface{}{"foo": ""}), strct},
+		{autogold.Want("Event", map[string]interface{}{"foo": ""}), cadenceEvent},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.want.Name(), func(t *testing.T) {
+			value := CadenceValueToInterfaceWithOption(tc.input, Options{
+				IncludeEmptyValues: true,
+			})
+			tc.want.Equal(t, value)
+		})
+	}
+}
+
+func TestWrapWithComplextTypes(t *testing.T) {
+	address1, _ := hex.DecodeString("f8d6e0586b0a20c7")
+	caddress1, _ := common.BytesToAddress(address1)
+	structType := cadence.StructType{
+		Location:            common.NewAddressLocation(nil, caddress1, ""),
+		QualifiedIdentifier: "Contract.Bar",
+		Fields: []cadence.Field{{
+			Identifier: "foo",
+			Type:       cadence.StringType{},
+		}},
+	}
+
+	strct := cadence.Struct{
+		Fields:     []cadence.Value{cadenceString("Foo")},
+		StructType: &structType,
+	}
+
+	cadenceEvent := cadence.NewEvent([]cadence.Value{cadenceString("Foo")}).WithType(&cadence.EventType{
+		Location:            common.NewAddressLocation(nil, caddress1, ""),
+		QualifiedIdentifier: "Contract.TestEvent",
+		Fields: []cadence.Field{{
+			Type:       cadence.StringType{},
+			Identifier: "foo",
+		}},
+	},
+	)
+
+	stringType := cadence.NewStringType()
+
+	resource := cadence.Resource{
+		ResourceType: &cadence.ResourceType{
+			Location:            common.NewAddressLocation(nil, caddress1, ""),
+			QualifiedIdentifier: "Contract.Resource",
+			Fields: []cadence.Field{{
+				Identifier: "foo",
+				Type:       cadence.StringType{},
+			}},
+		},
+		Fields: []cadence.Value{cadenceString("foo")},
+	}
+
+	cadenceAddress1 := cadence.BytesToAddress(address1)
+	path := cadence.Path{Domain: common.PathDomainStorage, Identifier: "foo"}
+	pathCap := cadence.NewPathCapability(cadenceAddress1, path, stringType)
+
+	testCases := []CadenceTest{
+		{autogold.Want("Struct", map[string]interface{}{"<A.f8d6e0586b0a20c7.Contract.Bar>": map[string]interface{}{"foo": "Foo"}}), strct},
+		{autogold.Want("Event", map[string]interface{}{"<A.f8d6e0586b0a20c7.Contract.TestEvent>": map[string]interface{}{"foo": "Foo"}}), cadenceEvent},
+		{autogold.Want("Resource", map[string]interface{}{"<@A.f8d6e0586b0a20c7.Contract.Resource>": map[string]interface{}{"foo": "foo"}}), resource},
+		{autogold.Want("PathCap", map[string]interface{}{"<Capability<String>>": map[string]interface{}{"address": "0xf8d6e0586b0a20c7", "path": "/storage/foo"}}), pathCap},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.want.Name(), func(t *testing.T) {
+			value := CadenceValueToInterfaceWithOption(tc.input, Options{
+				WrapWithComplexTypes: true,
+			})
 			tc.want.Equal(t, value)
 		})
 	}
