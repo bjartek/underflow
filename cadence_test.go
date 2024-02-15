@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type Cadencetest struct {
+type CadenceTest struct {
 	want  autogold.Value
 	input cadence.Value
 }
@@ -84,7 +84,7 @@ func TestCadenceValueToInterface(t *testing.T) {
 	ufix, _ := cadence.NewUFix64("42.0")
 	fix, _ := cadence.NewFix64("-2.0")
 
-	testCases := []Cadencetest{
+	testCases := []CadenceTest{
 		{autogold.Want("EmptyString", nil), cadenceString("")},
 		{autogold.Want("nil", nil), nil},
 		{autogold.Want("None", nil), cadence.NewOptional(nil)},
@@ -262,7 +262,7 @@ func TestExtractAddresses(t *testing.T) {
 		Fields:     []cadence.Value{address},
 		StructType: &structType,
 	}
-	testCases := []Cadencetest{
+	testCases := []CadenceTest{
 		{autogold.Want("Address", []string{"0xf8d6e0586b0a20c7"}), address},
 		{autogold.Want("OptAddress", []string{"0xf8d6e0586b0a20c7"}), opt},
 		{autogold.Want("Dict", []string{"0xf8d6e0586b0a20c7", "0x01cf0e2f2f715450"}), dict},
@@ -273,6 +273,48 @@ func TestExtractAddresses(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.want.Name(), func(t *testing.T) {
 			value := ExtractAddresses(tc.input)
+			tc.want.Equal(t, value)
+		})
+	}
+}
+
+func TestIncludeEmptyValues(t *testing.T) {
+	dict := cadence.NewDictionary([]cadence.KeyValuePair{{Key: cadenceString("foo"), Value: cadenceString("")}})
+	array := cadence.NewArray([]cadence.Value{cadenceString("foo"), cadenceString(""), cadenceString("bar")})
+	structType := cadence.StructType{
+		QualifiedIdentifier: "Contract.Bar",
+		Fields: []cadence.Field{{
+			Identifier: "foo",
+			Type:       cadence.StringType{},
+		}},
+	}
+
+	strct := cadence.Struct{
+		Fields:     []cadence.Value{cadenceString("")},
+		StructType: &structType,
+	}
+
+	cadenceEvent := cadence.NewEvent([]cadence.Value{cadenceString("")}).WithType(&cadence.EventType{
+		QualifiedIdentifier: "TestEvent",
+		Fields: []cadence.Field{{
+			Type:       cadence.StringType{},
+			Identifier: "foo",
+		}},
+	},
+	)
+
+	testCases := []CadenceTest{
+		{autogold.Want("Dict", map[string]interface{}{"foo": ""}), dict},
+		{autogold.Want("Array", []interface{}{"foo", "", "bar"}), array},
+		{autogold.Want("Struct", map[string]interface{}{"foo": ""}), strct},
+		{autogold.Want("Event", map[string]interface{}{"foo": ""}), cadenceEvent},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.want.Name(), func(t *testing.T) {
+			value := CadenceValueToInterfaceWithOption(tc.input, Options{
+				IncludeEmptyValues: true,
+			})
 			tc.want.Equal(t, value)
 		})
 	}
