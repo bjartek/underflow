@@ -63,10 +63,25 @@ func TestCadenceValueToInterface(t *testing.T) {
 	},
 	)
 
+	resource := cadence.Resource{
+		ResourceType: &cadence.ResourceType{
+			Location:            common.NewAddressLocation(nil, caddress1, ""),
+			QualifiedIdentifier: "Contract.Resource",
+			Fields: []cadence.Field{{
+				Identifier: "foo",
+				Type:       cadence.StringType{},
+			}},
+		},
+		Fields: []cadence.Value{foo},
+	}
+
+	path := cadence.Path{Domain: common.PathDomainStorage, Identifier: "foo"}
+	pathCap := cadence.NewPathCapability(cadenceAddress1, path, stringType)
+
 	structTypeValue := cadence.NewTypeValue(&structType)
 	stringTypeValue := cadence.NewTypeValue(&stringType)
 	ufix, _ := cadence.NewUFix64("42.0")
-	path := cadence.Path{Domain: common.PathDomainStorage, Identifier: "foo"}
+	fix, _ := cadence.NewFix64("-2.0")
 
 	testCases := []Cadencetest{
 		{autogold.Want("EmptyString", nil), cadenceString("")},
@@ -76,6 +91,7 @@ func TestCadenceValueToInterface(t *testing.T) {
 		{autogold.Want("Some(uint64)", uint64(42)), cadence.NewOptional(cadence.NewUInt64(42))},
 		{autogold.Want("uint64", uint64(42)), cadence.NewUInt64(42)},
 		{autogold.Want("ufix64", float64(42.0)), ufix},
+		{autogold.Want("fix64", float64(-2.0)), fix},
 		{autogold.Want("uint32", uint32(42)), cadence.NewUInt32(42)},
 		{autogold.Want("int", 42), cadence.NewInt(42)},
 		{autogold.Want("string array", []interface{}{"foo", "bar"}), cadence.NewArray([]cadence.Value{foo, bar})},
@@ -93,6 +109,8 @@ func TestCadenceValueToInterface(t *testing.T) {
 		{autogold.Want("EmojiDict", map[string]interface{}{"😁": "😁"}), emojiDict},
 		{autogold.Want("StoragePath", "/storage/foo"), path},
 		{autogold.Want("Event", map[string]interface{}{"foo": "foo"}), cadenceEvent},
+		{autogold.Want("PathCapablity", map[string]interface{}{"Capability<String>": map[string]interface{}{"address": "0xf8d6e0586b0a20c7", "path": "/storage/foo"}}), pathCap},
+		{autogold.Want("Resource", map[string]interface{}{"A.f8d6e0586b0a20c7.Contract.Resource": map[string]interface{}{"foo": "foo"}}), resource},
 	}
 
 	for _, tc := range testCases {
