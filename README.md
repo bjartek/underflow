@@ -26,9 +26,9 @@ type MyFancyContract_MyStruct struct {
 }
 
 
-myImpl := MyFancyContract{
+myImpl := MyFancyContract_MyStruct{
   Owner: "0x123",
-  Name: "Asd"
+  Name: "bjartek is the best"
 }
 
 
