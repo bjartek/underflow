@@ -3,6 +3,27 @@
 
 A library extracted out from https://github.com/bjartek/overflow that has less depdendencies and only parses to from go<>cadence
 
+## How to convert a cadence.Value to terser json or a go interface{} value
+
+
+if you want a `map[string]interface` use `underflow.CadenceValueToInterface`
+
+```cadence
+underflow.CadenceValueToJsonString(<your cadence value>)
+```
+
+This will create a very terse representation
+ - it will skip any value that is empty/bottom type
+ - if a value is empty a key is skipped
+
+If you do not like this  you can configure it like this
+
+```cadence
+underflow.CadenceValueToJsonStringWithOption(<your cadence value>, underflow.Options{
+	IncludeEmptyValues:   true, //this will not skip empty values/keys
+	WrapWithComplexTypes: true, //this will wrap any complex types with another layer that includes the type
+})
+```
 
 ## How to create a cadence value from a struct
 
