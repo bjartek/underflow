@@ -13,13 +13,13 @@ import (
 )
 
 type Options struct {
-	IncludeEmptyValues bool
-	AddComplexTypes    bool
+	IncludeEmptyValues   bool
+	WrapWithComplexTypes bool
 }
 
 var defaultOptions = Options{
-	IncludeEmptyValues: false,
-	AddComplexTypes:    false,
+	IncludeEmptyValues:   false,
+	WrapWithComplexTypes: false,
 }
 
 func CadenceValueToJsonString(value cadence.Value) (string, error) {
@@ -141,7 +141,14 @@ func CadenceValueToInterfaceWithOption(field cadence.Value, opt Options) interfa
 		if len(result) == 0 && !opt.IncludeEmptyValues {
 			return nil
 		}
-		return result
+
+		if !opt.WrapWithComplexTypes {
+			return result
+		}
+
+		return map[string]interface{}{
+			fmt.Sprintf("<%s>", field.StructType.ID()): result,
+		}
 	case cadence.Array:
 		// fmt.Println("is array ", field.ToGoValue(), " ", field.String())
 		var result []interface{}
@@ -190,7 +197,13 @@ func CadenceValueToInterfaceWithOption(field cadence.Value, opt Options) interfa
 			}
 		}
 
-		return result
+		if !opt.WrapWithComplexTypes {
+			return result
+		}
+
+		return map[string]interface{}{
+			fmt.Sprintf("<%s>", field.EventType.ID()): result,
+		}
 
 	case cadence.Resource:
 
@@ -208,16 +221,24 @@ func CadenceValueToInterfaceWithOption(field cadence.Value, opt Options) interfa
 			}
 		}
 
+		if !opt.WrapWithComplexTypes {
+			return fields
+		}
+
 		return map[string]interface{}{
-			field.ResourceType.ID(): fields,
+			fmt.Sprintf("<@%s>", field.ResourceType.ID()): fields,
 		}
 	case cadence.PathCapability:
 
+		fields := map[string]interface{}{
+			"address": CadenceValueToInterfaceWithOption(field.Address, opt),
+			"path":    CadenceValueToInterfaceWithOption(field.Path, opt),
+		}
+		if !opt.WrapWithComplexTypes {
+			return fields
+		}
 		return map[string]interface{}{
-			fmt.Sprintf("Capability<%s>", field.BorrowType.ID()): map[string]interface{}{
-				"address": CadenceValueToInterfaceWithOption(field.Address, opt),
-				"path":    CadenceValueToInterfaceWithOption(field.Path, opt),
-			},
+			fmt.Sprintf("<Capability<%s>>", field.BorrowType.ID()): fields,
 		}
 	default:
 		// fmt.Println("is fallthrough ", field.ToGoValue(), " ", field.String())

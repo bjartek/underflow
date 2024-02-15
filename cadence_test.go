@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math"
 	"testing"
 
 	"github.com/hexops/autogold"
@@ -84,6 +85,8 @@ func TestCadenceValueToInterface(t *testing.T) {
 	ufix, _ := cadence.NewUFix64("42.0")
 	fix, _ := cadence.NewFix64("-2.0")
 
+	var ui64 uint64 = math.MaxUint64
+
 	testCases := []CadenceTest{
 		{autogold.Want("EmptyString", nil), cadenceString("")},
 		{autogold.Want("nil", nil), nil},
@@ -91,6 +94,7 @@ func TestCadenceValueToInterface(t *testing.T) {
 		{autogold.Want("Some(string)", "foo"), cadence.NewOptional(foo)},
 		{autogold.Want("Some(uint64)", uint64(42)), cadence.NewOptional(cadence.NewUInt64(42))},
 		{autogold.Want("uint64", uint64(42)), cadence.NewUInt64(42)},
+		{autogold.Want("max uint64", ui64), cadence.NewUInt64(ui64)},
 		{autogold.Want("ufix64", float64(42.0)), ufix},
 		{autogold.Want("fix64", float64(-2.0)), fix},
 		{autogold.Want("uint32", uint32(42)), cadence.NewUInt32(42)},
@@ -110,8 +114,8 @@ func TestCadenceValueToInterface(t *testing.T) {
 		{autogold.Want("EmojiDict", map[string]interface{}{"😁": "😁"}), emojiDict},
 		{autogold.Want("StoragePath", "/storage/foo"), path},
 		{autogold.Want("Event", map[string]interface{}{"foo": "foo"}), cadenceEvent},
-		{autogold.Want("PathCapablity", map[string]interface{}{"Capability<String>": map[string]interface{}{"address": "0xf8d6e0586b0a20c7", "path": "/storage/foo"}}), pathCap},
-		{autogold.Want("Resource", map[string]interface{}{"A.f8d6e0586b0a20c7.Contract.Resource": map[string]interface{}{"foo": "foo"}}), resource},
+		{autogold.Want("PathCapablity", map[string]interface{}{"address": "0xf8d6e0586b0a20c7", "path": "/storage/foo"}), pathCap},
+		{autogold.Want("Resource", map[string]interface{}{"foo": "foo"}), resource},
 	}
 
 	for _, tc := range testCases {
@@ -314,6 +318,68 @@ func TestIncludeEmptyValues(t *testing.T) {
 		t.Run(tc.want.Name(), func(t *testing.T) {
 			value := CadenceValueToInterfaceWithOption(tc.input, Options{
 				IncludeEmptyValues: true,
+			})
+			tc.want.Equal(t, value)
+		})
+	}
+}
+
+func TestWrapWithComplextTypes(t *testing.T) {
+	address1, _ := hex.DecodeString("f8d6e0586b0a20c7")
+	caddress1, _ := common.BytesToAddress(address1)
+	structType := cadence.StructType{
+		Location:            common.NewAddressLocation(nil, caddress1, ""),
+		QualifiedIdentifier: "Contract.Bar",
+		Fields: []cadence.Field{{
+			Identifier: "foo",
+			Type:       cadence.StringType{},
+		}},
+	}
+
+	strct := cadence.Struct{
+		Fields:     []cadence.Value{cadenceString("Foo")},
+		StructType: &structType,
+	}
+
+	cadenceEvent := cadence.NewEvent([]cadence.Value{cadenceString("Foo")}).WithType(&cadence.EventType{
+		Location:            common.NewAddressLocation(nil, caddress1, ""),
+		QualifiedIdentifier: "Contract.TestEvent",
+		Fields: []cadence.Field{{
+			Type:       cadence.StringType{},
+			Identifier: "foo",
+		}},
+	},
+	)
+
+	stringType := cadence.NewStringType()
+
+	resource := cadence.Resource{
+		ResourceType: &cadence.ResourceType{
+			Location:            common.NewAddressLocation(nil, caddress1, ""),
+			QualifiedIdentifier: "Contract.Resource",
+			Fields: []cadence.Field{{
+				Identifier: "foo",
+				Type:       cadence.StringType{},
+			}},
+		},
+		Fields: []cadence.Value{cadenceString("foo")},
+	}
+
+	cadenceAddress1 := cadence.BytesToAddress(address1)
+	path := cadence.Path{Domain: common.PathDomainStorage, Identifier: "foo"}
+	pathCap := cadence.NewPathCapability(cadenceAddress1, path, stringType)
+
+	testCases := []CadenceTest{
+		{autogold.Want("Struct", map[string]interface{}{"<A.f8d6e0586b0a20c7.Contract.Bar>": map[string]interface{}{"foo": "Foo"}}), strct},
+		{autogold.Want("Event", map[string]interface{}{"<A.f8d6e0586b0a20c7.Contract.TestEvent>": map[string]interface{}{"foo": "Foo"}}), cadenceEvent},
+		{autogold.Want("Resource", map[string]interface{}{"<@A.f8d6e0586b0a20c7.Contract.Resource>": map[string]interface{}{"foo": "foo"}}), resource},
+		{autogold.Want("PathCap", map[string]interface{}{"<Capability<String>>": map[string]interface{}{"address": "0xf8d6e0586b0a20c7", "path": "/storage/foo"}}), pathCap},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.want.Name(), func(t *testing.T) {
+			value := CadenceValueToInterfaceWithOption(tc.input, Options{
+				WrapWithComplexTypes: true,
 			})
 			tc.want.Equal(t, value)
 		})
