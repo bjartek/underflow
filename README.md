@@ -19,6 +19,7 @@ pub contract MyFancyContract {
 Create the following go struct
 
 ```go
+
 type MyFancyContract_MyStruct struct {
 	Owner string `cadence:"owner,cadenceAddress"`
 	Name string `cadence:"name"`
@@ -31,9 +32,9 @@ myImpl := MyFancyContract{
 }
 
 
-//resolver is here a function that takes in the name of a struct and returns the identifier on the given network. 
+//resolver is here a function that takes in the name of a go struct and returns the identifier of the cadence type on a given network
+// resolver func(name string) (string, error) 
 
-// resolver func(name string) (string, error) input is name of struct, return value is identifier on the current network
 err, myCadenceValue :=underflow.InputToCadence(myImp, resolver)
 
 ```
