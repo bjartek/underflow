@@ -10,6 +10,7 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type Cadencetest struct {
@@ -130,6 +131,7 @@ func TestCadenceValueToJson(t *testing.T) {
 func TestParseInputValue(t *testing.T) {
 	foo := "foo"
 
+	var interfaceString interface{} = "foo"
 	var strPointer *string = nil
 	values := []interface{}{
 		"foo",
@@ -139,6 +141,10 @@ func TestParseInputValue(t *testing.T) {
 		[2]string{"foo", "bar"},
 		&foo,
 		strPointer,
+		float64(2.0),
+		uint(1.0),
+		interfaceString,
+		int8(8),
 	}
 
 	for idx, value := range values {
@@ -182,6 +188,18 @@ func TestMarshalCadenceStructWithStructTag(t *testing.T) {
 	assert.JSONEq(t, `{ "bar": "foo" }`, jsonVal)
 }
 
+// TODO: this might actually need an integration test to be useful
+func TestMarshalCadenceStructWithAddressStructTag(t *testing.T) {
+	val, err := InputToCadence(Debug_Foo2{Bar: "0xf8d6e0586b0a20c7"}, func(string) (string, error) {
+		return "A.123.Debug.Foo2", nil
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, "A.123.Debug.Foo2", val.Type().ID())
+	jsonVal, err := CadenceValueToJsonString(val)
+	assert.NoError(t, err)
+	assert.JSONEq(t, `{ "bar": "0xf8d6e0586b0a20c7" }`, jsonVal)
+}
+
 func TestPrimitiveInputToCadence(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -209,6 +227,53 @@ func TestPrimitiveInputToCadence(t *testing.T) {
 			assert.NoError(t, err)
 			result2 := CadenceValueToInterface(cadenceValue)
 			assert.Equal(t, test.value, result2)
+		})
+	}
+}
+
+func TestExtractAddresses(t *testing.T) {
+	address1, err := hexToAddress("f8d6e0586b0a20c7")
+	require.NoError(t, err)
+	address := *address1
+
+	address2Ptr, err := hexToAddress("01cf0e2f2f715450")
+	require.NoError(t, err)
+	address2 := *address2Ptr
+
+	opt := cadence.Optional{
+		Value: address,
+	}
+
+	dict := cadence.NewDictionary([]cadence.KeyValuePair{
+		{Key: cadenceString("owner"), Value: address},
+		{Key: cadenceString("sender"), Value: address2},
+	})
+
+	array := cadence.NewArray([]cadence.Value{address, address2})
+
+	structType := cadence.StructType{
+		QualifiedIdentifier: "Contract.Bar",
+		Fields: []cadence.Field{{
+			Identifier: "owner",
+			Type:       cadence.AddressType{},
+		}},
+	}
+	strct := cadence.Struct{
+		Fields:     []cadence.Value{address},
+		StructType: &structType,
+	}
+	testCases := []Cadencetest{
+		{autogold.Want("Address", []string{"0xf8d6e0586b0a20c7"}), address},
+		{autogold.Want("OptAddress", []string{"0xf8d6e0586b0a20c7"}), opt},
+		{autogold.Want("Dict", []string{"0xf8d6e0586b0a20c7", "0x01cf0e2f2f715450"}), dict},
+		{autogold.Want("Array", []string{"0xf8d6e0586b0a20c7", "0x01cf0e2f2f715450"}), array},
+		{autogold.Want("Struct", []string{"0xf8d6e0586b0a20c7"}), strct},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.want.Name(), func(t *testing.T) {
+			value := ExtractAddresses(tc.input)
+			tc.want.Equal(t, value)
 		})
 	}
 }
