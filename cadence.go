@@ -171,6 +171,33 @@ func CadenceValueToInterface(field cadence.Value) interface{} {
 
 		return result
 
+	case cadence.Resource:
+
+		fields := map[string]interface{}{}
+		// fmt.Println("is struct ", field.ToGoValue(), " ", field.String())
+		subStructNames := field.ResourceType.Fields
+
+		for j, subField := range field.Fields {
+			value := CadenceValueToInterface(subField)
+			key := subStructNames[j].Identifier
+
+			//	fmt.Println("struct ", key, "value", value)
+			if value != nil {
+				fields[key] = value
+			}
+		}
+
+		return map[string]interface{}{
+			field.ResourceType.ID(): fields,
+		}
+	case cadence.PathCapability:
+
+		return map[string]interface{}{
+			fmt.Sprintf("Capability<%s>", field.BorrowType.ID()): map[string]interface{}{
+				"address": CadenceValueToInterface(field.Address),
+				"path":    CadenceValueToInterface(field.Path),
+			},
+		}
 	default:
 		// fmt.Println("is fallthrough ", field.ToGoValue(), " ", field.String())
 
