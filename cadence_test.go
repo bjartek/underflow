@@ -85,6 +85,9 @@ func TestCadenceValueToInterface(t *testing.T) {
 	ufix, _ := cadence.NewUFix64("42.0")
 	fix, _ := cadence.NewFix64("-2.0")
 
+	largeUfix, _ := cadence.NewUFix64("184467440737.0")
+	smallfix, _ := cadence.NewFix64("-92233720368.5")
+	largefix, _ := cadence.NewFix64("92233720368.5")
 	var ui64 uint64 = math.MaxUint64
 
 	testCases := []CadenceTest{
@@ -96,7 +99,10 @@ func TestCadenceValueToInterface(t *testing.T) {
 		{autogold.Want("uint64", uint64(42)), cadence.NewUInt64(42)},
 		{autogold.Want("max uint64", ui64), cadence.NewUInt64(ui64)},
 		{autogold.Want("ufix64", float64(42.0)), ufix},
+		{autogold.Want("large_ufix64", float64(1.84467440737e+11)), largeUfix},
 		{autogold.Want("fix64", float64(-2.0)), fix},
+		{autogold.Want("small_fix64", float64(-9.22337203685e+10)), smallfix},
+		{autogold.Want("large_fix64", float64(9.22337203685e+10)), largefix},
 		{autogold.Want("uint32", uint32(42)), cadence.NewUInt32(42)},
 		{autogold.Want("int", 42), cadence.NewInt(42)},
 		{autogold.Want("string array", []interface{}{"foo", "bar"}), cadence.NewArray([]cadence.Value{foo, bar})},
