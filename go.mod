@@ -7,7 +7,7 @@ require (
 	github.com/hexops/autogold v1.3.1
 	github.com/onflow/cadence v0.42.6
 	github.com/stretchr/testify v1.8.4
-	golang.org/x/exp v0.0.0-20240213143201-ec583247a57a
+	golang.org/x/exp v0.0.0-20230321023759-10a507213a29
 )
 
 require (
