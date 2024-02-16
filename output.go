@@ -181,11 +181,11 @@ func CadenceValueToInterfaceWithOption(field cadence.Value, opt Options) interfa
 		return map[string]interface{}{
 			fmt.Sprintf("<@%s>", field.ResourceType.ID()): fields,
 		}
-	case cadence.PathCapability:
+	case cadence.Capability:
 
 		fields := map[string]interface{}{
 			"address": CadenceValueToInterfaceWithOption(field.Address, opt),
-			"path":    CadenceValueToInterfaceWithOption(field.Path, opt),
+			"id":      CadenceValueToInterfaceWithOption(field.ID, opt),
 		}
 		if !opt.WrapWithComplexTypes {
 			return fields
