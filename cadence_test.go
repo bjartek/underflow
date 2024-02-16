@@ -330,6 +330,32 @@ func TestIncludeEmptyValues(t *testing.T) {
 	}
 }
 
+func TestUseStringsForFixedNumbers(t *testing.T) {
+	ufix, _ := cadence.NewUFix64("42.0")
+	fix, _ := cadence.NewFix64("-2.0")
+
+	largeUfix, _ := cadence.NewUFix64("184467440737.0")
+	smallfix, _ := cadence.NewFix64("-92233720368.5")
+	largefix, _ := cadence.NewFix64("92233720368.5")
+
+	testCases := []CadenceTest{
+		{autogold.Want("ufix64", "42.00000000"), ufix},
+		{autogold.Want("large_ufix64", "184467440737.00000000"), largeUfix},
+		{autogold.Want("fix64", "-2.00000000"), fix},
+		{autogold.Want("small_fix64", "-92233720368.50000000"), smallfix},
+		{autogold.Want("large_fix64", "92233720368.50000000"), largefix},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.want.Name(), func(t *testing.T) {
+			value := CadenceValueToInterfaceWithOption(tc.input, Options{
+				UseStringForFixedNumbers: true,
+			})
+			tc.want.Equal(t, value)
+		})
+	}
+}
+
 func TestWrapWithComplextTypes(t *testing.T) {
 	address1, _ := hex.DecodeString("f8d6e0586b0a20c7")
 	caddress1, _ := common.BytesToAddress(address1)
