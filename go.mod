@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/fatih/structtag v1.2.0
 	github.com/hexops/autogold v1.3.1
-	github.com/onflow/cadence v0.42.9
+	github.com/onflow/cadence v0.42.6
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/exp v0.0.0-20240213143201-ec583247a57a
 )
