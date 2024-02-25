@@ -7,7 +7,6 @@ import (
 
 	"github.com/fatih/structtag"
 	"github.com/onflow/cadence"
-	"golang.org/x/exp/slices"
 )
 
 // a resolver to resolve a input type into a name, can be used to resolve struct names for instance
@@ -60,7 +59,7 @@ func ReflectToCadence(value reflect.Value, resolver InputResolver) (cadence.Valu
 				name = strings.ToLower(field.Name)
 			}
 
-			if tag != nil && slices.Contains(tag.Options, "cadenceAddress") {
+			if IsTagCadecenAddress(tag) {
 				stringVal := getAndUnquoteString(cadenceVal)
 				adr, err := hexToAddress(stringVal)
 				if err != nil {
@@ -164,4 +163,17 @@ func ReflectToCadence(value reflect.Value, resolver InputResolver) (cadence.Valu
 	}
 
 	return nil, fmt.Errorf("Not supported type for now. Type : %s", inputType.Kind())
+}
+
+func IsTagCadecenAddress(tag *structtag.Tag) bool {
+	if tag == nil {
+		return false
+	}
+
+	for _, opt := range tag.Options {
+		if opt == "cadenceAddress" {
+			return true
+		}
+	}
+	return false
 }
