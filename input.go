@@ -59,15 +59,7 @@ func ReflectToCadence(value reflect.Value, resolver InputResolver) (cadence.Valu
 				name = strings.ToLower(field.Name)
 			}
 
-			isAddressTag := false
-			for _, opt := range tag.Options {
-				if opt == "cadenceAddress" {
-					isAddressTag = true
-					break
-				}
-			}
-
-			if tag != nil && isAddressTag {
+			if IsTagCadecenAddress(tag) {
 				stringVal := getAndUnquoteString(cadenceVal)
 				adr, err := hexToAddress(stringVal)
 				if err != nil {
@@ -171,4 +163,17 @@ func ReflectToCadence(value reflect.Value, resolver InputResolver) (cadence.Valu
 	}
 
 	return nil, fmt.Errorf("Not supported type for now. Type : %s", inputType.Kind())
+}
+
+func IsTagCadecenAddress(tag *structtag.Tag) bool {
+	if tag == nil {
+		return false
+	}
+
+	for _, opt := range tag.Options {
+		if opt == "cadenceAddress" {
+			return true
+		}
+	}
+	return false
 }
