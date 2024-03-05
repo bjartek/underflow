@@ -112,7 +112,9 @@ func CadenceValueToInterfaceWithOption(field cadence.Value, opt Options) interfa
 		return result
 
 	case cadence.Int:
-		return field.Int()
+		return field.String()
+	case cadence.UInt:
+		return field.String()
 	case cadence.Address:
 		return field.String()
 	case cadence.TypeValue:

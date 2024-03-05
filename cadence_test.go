@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"math/big"
 	"testing"
 
 	"github.com/hexops/autogold"
@@ -90,6 +91,13 @@ func TestCadenceValueToInterface(t *testing.T) {
 	largefix, _ := cadence.NewFix64("92233720368.5")
 	var ui64 uint64 = math.MaxUint64
 
+	largeInt := big.NewInt(int64(2086000000001000000))
+	largeInt2 := big.NewInt(int64(1000))
+	largeInt.Mul(largeInt, largeInt2)
+
+	largeUInt := big.NewInt(-1)
+	largeUInt.Mul(largeUInt, largeInt)
+
 	testCases := []CadenceTest{
 		{autogold.Want("EmptyString", nil), cadenceString("")},
 		{autogold.Want("nil", nil), nil},
@@ -104,7 +112,9 @@ func TestCadenceValueToInterface(t *testing.T) {
 		{autogold.Want("small_fix64", float64(-9.22337203685e+10)), smallfix},
 		{autogold.Want("large_fix64", float64(9.22337203685e+10)), largefix},
 		{autogold.Want("uint32", uint32(42)), cadence.NewUInt32(42)},
-		{autogold.Want("int", 42), cadence.NewInt(42)},
+		{autogold.Want("int", "42"), cadence.NewInt(42)},
+		{autogold.Want("int_large", "2086000000001000000000"), cadence.NewIntFromBig(largeInt)},
+		{autogold.Want("uint_large", "-2086000000001000000000"), cadence.NewIntFromBig(largeUInt)},
 		{autogold.Want("string array", []interface{}{"foo", "bar"}), cadence.NewArray([]cadence.Value{foo, bar})},
 		{autogold.Want("empty array", nil), cadence.NewArray([]cadence.Value{emptyString})},
 		{autogold.Want("string array ignore empty", []interface{}{"foo", "bar"}), cadence.NewArray([]cadence.Value{foo, emptyString, bar})},
@@ -152,7 +162,6 @@ func TestParseInputValue(t *testing.T) {
 		&foo,
 		strPointer,
 		float64(2.0),
-		uint(1.0),
 		interfaceString,
 		int8(8),
 	}
@@ -215,7 +224,8 @@ func TestPrimitiveInputToCadence(t *testing.T) {
 		value interface{}
 		name  string
 	}{
-		{name: "int", value: 1},
+		{name: "int", value: "1"},   // arbitrary precision
+		{name: "uint", value: "-1"}, // arbitrary precision
 		{name: "int8", value: int8(8)},
 		{name: "int16", value: int16(16)},
 		{name: "int32", value: int32(32)},
