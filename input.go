@@ -17,13 +17,55 @@ func InputToCadence(v interface{}, resolver InputResolver) (cadence.Value, error
 	return ReflectToCadence(f, resolver)
 }
 
+func NewCadenceValue(value any) (cadence.Value, error) {
+	switch v := value.(type) {
+	case string:
+		return cadence.NewString(v)
+	case int:
+		return cadence.NewInt(v), nil
+	case int8:
+		return cadence.NewInt8(v), nil
+	case int16:
+		return cadence.NewInt16(v), nil
+	case int32:
+		return cadence.NewInt32(v), nil
+	case int64:
+		return cadence.NewInt64(v), nil
+	case uint8:
+		return cadence.NewUInt8(v), nil
+	case uint16:
+		return cadence.NewUInt16(v), nil
+	case uint32:
+		return cadence.NewUInt32(v), nil
+	case uint64:
+		return cadence.NewUInt64(v), nil
+	case []any:
+		values := make([]cadence.Value, len(v))
+
+		for i, v := range v {
+			t, err := NewCadenceValue(v)
+			if err != nil {
+				return nil, err
+			}
+
+			values[i] = t
+		}
+
+		return cadence.NewArray(values), nil
+	case nil:
+		return cadence.NewOptional(nil), nil
+	}
+
+	return nil, fmt.Errorf("value type %T cannot be converted to ABI value type", value)
+}
+
 func ReflectToCadence(value reflect.Value, resolver InputResolver) (cadence.Value, error) {
 	inputType := value.Type()
 
 	kind := inputType.Kind()
 	switch kind {
 	case reflect.Interface:
-		return cadence.NewValue(value.Interface())
+		return NewCadenceValue(value.Interface())
 	case reflect.Struct:
 		var val []cadence.Value
 		fields := []cadence.Field{}
@@ -162,7 +204,7 @@ func ReflectToCadence(value reflect.Value, resolver InputResolver) (cadence.Valu
 
 	}
 
-	return nil, fmt.Errorf("Not supported type for now. Type : %s", inputType.Kind())
+	return nil, fmt.Errorf("not supported type for now. Type : %s", inputType.Kind())
 }
 
 func IsTagCadecenAddress(tag *structtag.Tag) bool {

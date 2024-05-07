@@ -25,15 +25,13 @@ func TestCadenceValueToInterface(t *testing.T) {
 	bar := cadenceString("bar")
 	emptyString := cadenceString("")
 
-	emptyStrct := cadence.Struct{
-		Fields: []cadence.Value{emptyString},
-		StructType: &cadence.StructType{
-			Fields: []cadence.Field{{
-				Identifier: "foo",
-				Type:       cadence.StringType,
-			}},
-		},
-	}
+	emptyStrct := cadence.NewStruct([]cadence.Value{emptyString}).WithType(&cadence.StructType{
+		Fields: []cadence.Field{{
+			Identifier: "foo",
+			Type:       cadence.StringType,
+		}},
+	},
+	)
 
 	address1, _ := hex.DecodeString("f8d6e0586b0a20c7")
 	caddress1, _ := common.BytesToAddress(address1)
@@ -45,10 +43,8 @@ func TestCadenceValueToInterface(t *testing.T) {
 			Type:       cadence.StringType,
 		}},
 	}
-	strct := cadence.Struct{
-		Fields:     []cadence.Value{bar},
-		StructType: &structType,
-	}
+	strct := cadence.NewStruct([]cadence.Value{bar}).WithType(&structType)
+
 	dict := cadence.NewDictionary([]cadence.KeyValuePair{{Key: foo, Value: bar}})
 
 	emoji := cadenceString("😁")
@@ -65,23 +61,22 @@ func TestCadenceValueToInterface(t *testing.T) {
 	},
 	)
 
-	resource := cadence.Resource{
-		ResourceType: &cadence.ResourceType{
-			Location:            common.NewAddressLocation(nil, caddress1, ""),
-			QualifiedIdentifier: "Contract.Resource",
-			Fields: []cadence.Field{{
-				Identifier: "foo",
-				Type:       cadence.StringType,
-			}},
-		},
-		Fields: []cadence.Value{foo},
-	}
+	resource := cadence.NewResource([]cadence.Value{foo}).WithType(&cadence.ResourceType{
+		Location:            common.NewAddressLocation(nil, caddress1, ""),
+		QualifiedIdentifier: "Contract.Resource",
+		Fields: []cadence.Field{{
+			Identifier: "foo",
+			Type:       cadence.StringType,
+		}},
+	})
 
 	stringType := cadence.StringType
 	path := cadence.Path{Domain: common.PathDomainStorage, Identifier: "foo"}
 	pathCap := cadence.NewCapability(1, cadenceAddress1, cadence.StringType)
 
 	structTypeValue := cadence.NewTypeValue(&structType)
+	pathCapComplex := cadence.NewCapability(1, cadenceAddress1, &structType)
+
 	stringTypeValue := cadence.NewTypeValue(&stringType)
 	ufix, _ := cadence.NewUFix64("42.0")
 	fix, _ := cadence.NewFix64("-2.0")
@@ -130,7 +125,14 @@ func TestCadenceValueToInterface(t *testing.T) {
 		{autogold.Want("EmojiDict", map[string]interface{}{"😁": "😁"}), emojiDict},
 		{autogold.Want("StoragePath", "/storage/foo"), path},
 		{autogold.Want("Event", map[string]interface{}{"foo": "foo"}), cadenceEvent},
-		{autogold.Want("PathCapablity", map[string]interface{}{"address": "0xf8d6e0586b0a20c7", "id": 1}), pathCap},
+		{autogold.Want("PathCapablity", map[string]interface{}{
+			"address": "0xf8d6e0586b0a20c7", "borrowType": "String",
+			"id": 1,
+		}), pathCap},
+		{autogold.Want("PathCapablityComplex", map[string]interface{}{
+			"address": "0xf8d6e0586b0a20c7", "borrowType": "A.f8d6e0586b0a20c7.Contract.Bar",
+			"id": 1,
+		}), pathCapComplex},
 		{autogold.Want("Resource", map[string]interface{}{"foo": "foo"}), resource},
 	}
 
@@ -278,10 +280,7 @@ func TestExtractAddresses(t *testing.T) {
 			Type:       cadence.AddressType,
 		}},
 	}
-	strct := cadence.Struct{
-		Fields:     []cadence.Value{address},
-		StructType: &structType,
-	}
+	strct := cadence.NewStruct([]cadence.Value{address}).WithType(&structType)
 	testCases := []CadenceTest{
 		{autogold.Want("Address", []string{"0xf8d6e0586b0a20c7"}), address},
 		{autogold.Want("OptAddress", []string{"0xf8d6e0586b0a20c7"}), opt},
@@ -309,10 +308,7 @@ func TestIncludeEmptyValues(t *testing.T) {
 		}},
 	}
 
-	strct := cadence.Struct{
-		Fields:     []cadence.Value{cadenceString("")},
-		StructType: &structType,
-	}
+	strct := cadence.NewStruct([]cadence.Value{cadenceString("")}).WithType(&structType)
 
 	cadenceEvent := cadence.NewEvent([]cadence.Value{cadenceString("")}).WithType(&cadence.EventType{
 		QualifiedIdentifier: "TestEvent",
@@ -377,11 +373,7 @@ func TestWrapWithComplextTypes(t *testing.T) {
 			Type:       cadence.StringType,
 		}},
 	}
-
-	strct := cadence.Struct{
-		Fields:     []cadence.Value{cadenceString("Foo")},
-		StructType: &structType,
-	}
+	strct := cadence.NewStruct([]cadence.Value{cadenceString("Foo")}).WithType(&structType)
 
 	cadenceEvent := cadence.NewEvent([]cadence.Value{cadenceString("Foo")}).WithType(&cadence.EventType{
 		Location:            common.NewAddressLocation(nil, caddress1, ""),
@@ -395,17 +387,14 @@ func TestWrapWithComplextTypes(t *testing.T) {
 
 	stringType := cadence.StringType
 
-	resource := cadence.Resource{
-		ResourceType: &cadence.ResourceType{
-			Location:            common.NewAddressLocation(nil, caddress1, ""),
-			QualifiedIdentifier: "Contract.Resource",
-			Fields: []cadence.Field{{
-				Identifier: "foo",
-				Type:       cadence.StringType,
-			}},
-		},
-		Fields: []cadence.Value{cadenceString("foo")},
-	}
+	resource := cadence.NewResource([]cadence.Value{cadenceString("foo")}).WithType(&cadence.ResourceType{
+		Location:            common.NewAddressLocation(nil, caddress1, ""),
+		QualifiedIdentifier: "Contract.Resource",
+		Fields: []cadence.Field{{
+			Identifier: "foo",
+			Type:       cadence.StringType,
+		}},
+	})
 
 	cadenceAddress1 := cadence.BytesToAddress(address1)
 	pathCap := cadence.NewCapability(1, cadenceAddress1, stringType)
@@ -414,7 +403,10 @@ func TestWrapWithComplextTypes(t *testing.T) {
 		{autogold.Want("Struct", map[string]interface{}{"<A.f8d6e0586b0a20c7.Contract.Bar>": map[string]interface{}{"foo": "Foo"}}), strct},
 		{autogold.Want("Event", map[string]interface{}{"<A.f8d6e0586b0a20c7.Contract.TestEvent>": map[string]interface{}{"foo": "Foo"}}), cadenceEvent},
 		{autogold.Want("Resource", map[string]interface{}{"<@A.f8d6e0586b0a20c7.Contract.Resource>": map[string]interface{}{"foo": "foo"}}), resource},
-		{autogold.Want("PathCap", map[string]interface{}{"<Capability<String>>": map[string]interface{}{"address": "0xf8d6e0586b0a20c7", "id": 1}}), pathCap},
+		{autogold.Want("PathCap", map[string]interface{}{"<Capability<String>>": map[string]interface{}{
+			"address": "0xf8d6e0586b0a20c7", "borrowType": "String",
+			"id": 1,
+		}}), pathCap},
 	}
 
 	for _, tc := range testCases {

@@ -54,7 +54,6 @@ func CadenceValueToInterfaceWithOption(field cadence.Value, opt Options) interfa
 	case cadence.Optional:
 		return CadenceValueToInterfaceWithOption(field.Value, opt)
 	case cadence.Dictionary:
-		// fmt.Println("is dict ", field.ToGoValue(), " ", field.String())
 		result := map[string]interface{}{}
 		for _, item := range field.Pairs {
 			value := CadenceValueToInterfaceWithOption(item.Value, opt)
@@ -71,37 +70,10 @@ func CadenceValueToInterfaceWithOption(field cadence.Value, opt Options) interfa
 			return nil
 		}
 		return result
-	case cadence.Struct:
-		// fmt.Println("is struct ", field.ToGoValue(), " ", field.String())
-		result := map[string]interface{}{}
-		subStructNames := field.StructType.Fields
-
-		for j, subField := range field.Fields {
-			value := CadenceValueToInterfaceWithOption(subField, opt)
-			key := subStructNames[j].Identifier
-
-			//	fmt.Println("struct ", key, "value", value)
-			if value != nil || opt.IncludeEmptyValues {
-				result[key] = value
-			}
-		}
-		if len(result) == 0 && !opt.IncludeEmptyValues {
-			return nil
-		}
-
-		if !opt.WrapWithComplexTypes {
-			return result
-		}
-
-		return map[string]interface{}{
-			fmt.Sprintf("<%s>", field.StructType.ID()): result,
-		}
 	case cadence.Array:
-		// fmt.Println("is array ", field.ToGoValue(), " ", field.String())
 		var result []interface{}
 		for _, item := range field.Values {
 			value := CadenceValueToInterfaceWithOption(item, opt)
-			//	fmt.Printf("%+v\n", value)
 			if value != nil || opt.IncludeEmptyValues {
 				result = append(result, value)
 			}
@@ -110,18 +82,33 @@ func CadenceValueToInterfaceWithOption(field cadence.Value, opt Options) interfa
 			return nil
 		}
 		return result
-
-	case cadence.Int:
-		return field.String()
-	case cadence.UInt:
-		return field.String()
-	case cadence.Address:
-		return field.String()
+	case cadence.Int8:
+		return int8(field)
+	case cadence.Int16:
+		return int16(field)
+	case cadence.Int32:
+		return int32(field)
+	case cadence.Int64:
+		return int64(field)
+	case cadence.UInt8:
+		return uint8(field)
+	case cadence.UInt16:
+		return uint16(field)
+	case cadence.UInt32:
+		return uint32(field)
+	case cadence.UInt64:
+		return uint64(field)
+	case cadence.Word8:
+		return uint8(field)
+	case cadence.Word16:
+		return uint16(field)
+	case cadence.Word32:
+		return uint32(field)
+	case cadence.Word64:
+		return uint64(field)
 	case cadence.TypeValue:
-		// fmt.Println("is type ", field.ToGoValue(), " ", field.String())
 		return field.StaticType.ID()
 	case cadence.String:
-		// fmt.Println("is string ", field.ToGoValue(), " ", field.String())
 		value := getAndUnquoteString(field)
 		if value == "" && !opt.IncludeEmptyValues {
 			return nil
@@ -142,52 +129,21 @@ func CadenceValueToInterfaceWithOption(field cadence.Value, opt Options) interfa
 		}
 		float, _ := strconv.ParseFloat(field.String(), 64)
 		return float
+	case cadence.Struct:
+		return CadenceCompostiteValueToInterfaceWithOption(field, opt, fmt.Sprintf("<%s>", field.StructType.ID()))
 	case cadence.Event:
-		result := map[string]interface{}{}
-
-		for i, subField := range field.Fields {
-			value := CadenceValueToInterfaceWithOption(subField, opt)
-			if value != nil || opt.IncludeEmptyValues {
-				result[field.EventType.Fields[i].Identifier] = value
-			}
-		}
-
-		if !opt.WrapWithComplexTypes {
-			return result
-		}
-
-		return map[string]interface{}{
-			fmt.Sprintf("<%s>", field.EventType.ID()): result,
-		}
-
+		return CadenceCompostiteValueToInterfaceWithOption(field, opt, fmt.Sprintf("<%s>", field.EventType.ID()))
 	case cadence.Resource:
-
-		fields := map[string]interface{}{}
-		// fmt.Println("is struct ", field.ToGoValue(), " ", field.String())
-		subStructNames := field.ResourceType.Fields
-
-		for j, subField := range field.Fields {
-			value := CadenceValueToInterfaceWithOption(subField, opt)
-			key := subStructNames[j].Identifier
-
-			//	fmt.Println("struct ", key, "value", value)
-			if value != nil || opt.IncludeEmptyValues {
-				fields[key] = value
-			}
-		}
-
-		if !opt.WrapWithComplexTypes {
-			return fields
-		}
-
-		return map[string]interface{}{
-			fmt.Sprintf("<@%s>", field.ResourceType.ID()): fields,
-		}
+		return CadenceCompostiteValueToInterfaceWithOption(field, opt, fmt.Sprintf("<@%s>", field.ResourceType.ID()))
+	case cadence.Attachment:
+		return CadenceCompostiteValueToInterfaceWithOption(field, opt, fmt.Sprintf("<Attachment<%s>>", field.AttachmentType.ID()))
+	case cadence.Contract:
+		return CadenceCompostiteValueToInterfaceWithOption(field, opt, fmt.Sprintf("<Contract<%s>>", field.ContractType.ID()))
 	case cadence.Capability:
-
 		fields := map[string]interface{}{
-			"address": CadenceValueToInterfaceWithOption(field.Address, opt),
-			"id":      CadenceValueToInterfaceWithOption(field.ID, opt),
+			"borrowType": field.BorrowType.ID(),
+			"address":    CadenceValueToInterfaceWithOption(field.Address, opt),
+			"id":         CadenceValueToInterfaceWithOption(field.ID, opt),
 		}
 		if !opt.WrapWithComplexTypes {
 			return fields
@@ -195,13 +151,38 @@ func CadenceValueToInterfaceWithOption(field cadence.Value, opt Options) interfa
 		return map[string]interface{}{
 			fmt.Sprintf("<Capability<%s>>", field.BorrowType.ID()): fields,
 		}
+	case cadence.Bool:
+		return bool(field)
+	case cadence.Bytes:
+		return []byte(field)
+	case cadence.Character:
+		return string(field)
+	case cadence.Function:
+		return field.FunctionType.ID()
 	default:
-		// fmt.Println("is fallthrough ", field.ToGoValue(), " ", field.String())
-
-		goValue := field.ToGoValue()
-		if goValue != nil {
-			return goValue
-		}
 		return field.String()
+	}
+}
+
+func CadenceCompostiteValueToInterfaceWithOption(field cadence.Composite, opt Options, wrapper string) interface{} {
+	fields := map[string]interface{}{}
+	subFields := cadence.FieldsMappedByName(field)
+	for key, subField := range subFields {
+		value := CadenceValueToInterfaceWithOption(subField, opt)
+		if value != nil || opt.IncludeEmptyValues {
+			fields[key] = value
+		}
+	}
+
+	if len(fields) == 0 && !opt.IncludeEmptyValues {
+		return nil
+	}
+
+	if !opt.WrapWithComplexTypes {
+		return fields
+	}
+
+	return map[string]interface{}{
+		wrapper: fields,
 	}
 }

@@ -28,7 +28,9 @@ func ExtractAddresses(field cadence.Value) []string {
 		return result
 	case cadence.Struct:
 		result := []string{}
-		for _, subField := range field.Fields {
+
+		fieldMap := cadence.FieldsMappedByName(field)
+		for _, subField := range fieldMap {
 			value := ExtractAddresses(subField)
 			if value != nil {
 				result = append(result, value...)
