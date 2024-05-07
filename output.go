@@ -44,6 +44,10 @@ func CadenceValueToInterface(field cadence.Value) interface{} {
 	return CadenceValueToInterfaceWithOption(field, defaultOptions)
 }
 
+/*
+*
+values.go:var _ Value = Function{}
+*/
 // / Convert a cadence value into a interface{} structure for easier consumption in go with options
 func CadenceValueToInterfaceWithOption(field cadence.Value, opt Options) interface{} {
 	if field == nil {
@@ -54,7 +58,6 @@ func CadenceValueToInterfaceWithOption(field cadence.Value, opt Options) interfa
 	case cadence.Optional:
 		return CadenceValueToInterfaceWithOption(field.Value, opt)
 	case cadence.Dictionary:
-		// fmt.Println("is dict ", field.ToGoValue(), " ", field.String())
 		result := map[string]interface{}{}
 		for _, item := range field.Pairs {
 			value := CadenceValueToInterfaceWithOption(item.Value, opt)
@@ -72,13 +75,10 @@ func CadenceValueToInterfaceWithOption(field cadence.Value, opt Options) interfa
 		}
 		return result
 	case cadence.Struct:
-		// fmt.Println("is struct ", field.ToGoValue(), " ", field.String())
 		result := map[string]interface{}{}
-		subStructNames := field.StructType.Fields
-
-		for j, subField := range field.Fields {
+		subFields := cadence.FieldsMappedByName(field)
+		for key, subField := range subFields {
 			value := CadenceValueToInterfaceWithOption(subField, opt)
-			key := subStructNames[j].Identifier
 
 			//	fmt.Println("struct ", key, "value", value)
 			if value != nil || opt.IncludeEmptyValues {
@@ -97,11 +97,9 @@ func CadenceValueToInterfaceWithOption(field cadence.Value, opt Options) interfa
 			fmt.Sprintf("<%s>", field.StructType.ID()): result,
 		}
 	case cadence.Array:
-		// fmt.Println("is array ", field.ToGoValue(), " ", field.String())
 		var result []interface{}
 		for _, item := range field.Values {
 			value := CadenceValueToInterfaceWithOption(item, opt)
-			//	fmt.Printf("%+v\n", value)
 			if value != nil || opt.IncludeEmptyValues {
 				result = append(result, value)
 			}
@@ -113,14 +111,54 @@ func CadenceValueToInterfaceWithOption(field cadence.Value, opt Options) interfa
 
 	case cadence.Int:
 		return field.String()
+
+	case cadence.Int8:
+		return int8(field)
+	case cadence.Int16:
+		return int16(field)
+	case cadence.Int32:
+		return int32(field)
+	case cadence.Int64:
+		return int64(field)
+	case cadence.Int128:
+		return field.String()
+	case cadence.Int256:
+		return field.String()
+	case cadence.UInt8:
+		return uint8(field)
+	case cadence.UInt16:
+		return uint16(field)
+	case cadence.UInt32:
+		return uint32(field)
+	case cadence.UInt64:
+		return uint64(field)
+	case cadence.UInt128:
+		return field.String()
+	case cadence.UInt256:
+		return field.String()
+	case cadence.Word8:
+		return uint8(field)
+	case cadence.Word16:
+		return uint16(field)
+	case cadence.Word32:
+		return uint32(field)
+	case cadence.Word64:
+		return uint64(field)
+	case cadence.Word128:
+		return field.String()
+	case cadence.Word256:
+		return field.String()
 	case cadence.UInt:
 		return field.String()
 	case cadence.Address:
+		return field.String()
+	case *cadence.InclusiveRange:
 		return field.String()
 	case cadence.TypeValue:
 		// fmt.Println("is type ", field.ToGoValue(), " ", field.String())
 		return field.StaticType.ID()
 	case cadence.String:
+		return string(field)
 		// fmt.Println("is string ", field.ToGoValue(), " ", field.String())
 		value := getAndUnquoteString(field)
 		if value == "" && !opt.IncludeEmptyValues {
@@ -145,10 +183,11 @@ func CadenceValueToInterfaceWithOption(field cadence.Value, opt Options) interfa
 	case cadence.Event:
 		result := map[string]interface{}{}
 
-		for i, subField := range field.Fields {
+		subFields := cadence.FieldsMappedByName(field)
+		for key, subField := range subFields {
 			value := CadenceValueToInterfaceWithOption(subField, opt)
 			if value != nil || opt.IncludeEmptyValues {
-				result[field.EventType.Fields[i].Identifier] = value
+				result[key] = value
 			}
 		}
 
@@ -164,11 +203,9 @@ func CadenceValueToInterfaceWithOption(field cadence.Value, opt Options) interfa
 
 		fields := map[string]interface{}{}
 		// fmt.Println("is struct ", field.ToGoValue(), " ", field.String())
-		subStructNames := field.ResourceType.Fields
-
-		for j, subField := range field.Fields {
+		subFields := cadence.FieldsMappedByName(field)
+		for key, subField := range subFields {
 			value := CadenceValueToInterfaceWithOption(subField, opt)
-			key := subStructNames[j].Identifier
 
 			//	fmt.Println("struct ", key, "value", value)
 			if value != nil || opt.IncludeEmptyValues {
@@ -183,6 +220,49 @@ func CadenceValueToInterfaceWithOption(field cadence.Value, opt Options) interfa
 		return map[string]interface{}{
 			fmt.Sprintf("<@%s>", field.ResourceType.ID()): fields,
 		}
+
+	case cadence.Attachment:
+
+		fields := map[string]interface{}{}
+		// fmt.Println("is struct ", field.ToGoValue(), " ", field.String())
+		subFields := cadence.FieldsMappedByName(field)
+		for key, subField := range subFields {
+			value := CadenceValueToInterfaceWithOption(subField, opt)
+
+			//	fmt.Println("struct ", key, "value", value)
+			if value != nil || opt.IncludeEmptyValues {
+				fields[key] = value
+			}
+		}
+
+		if !opt.WrapWithComplexTypes {
+			return fields
+		}
+
+		return map[string]interface{}{
+			fmt.Sprintf("<Attachment<%s>>", field.AttachmentType.ID()): fields,
+		}
+
+	case cadence.Contract:
+		fields := map[string]interface{}{}
+		subFields := cadence.FieldsMappedByName(field)
+		for key, subField := range subFields {
+			value := CadenceValueToInterfaceWithOption(subField, opt)
+
+			//	fmt.Println("struct ", key, "value", value)
+			if value != nil || opt.IncludeEmptyValues {
+				fields[key] = value
+			}
+		}
+
+		if !opt.WrapWithComplexTypes {
+			return fields
+		}
+
+		return map[string]interface{}{
+			fmt.Sprintf("<Contract<%s>>", field.ContractType.ID()): fields,
+		}
+
 	case cadence.Capability:
 
 		fields := map[string]interface{}{
@@ -195,13 +275,21 @@ func CadenceValueToInterfaceWithOption(field cadence.Value, opt Options) interfa
 		return map[string]interface{}{
 			fmt.Sprintf("<Capability<%s>>", field.BorrowType.ID()): fields,
 		}
+	case cadence.Bool:
+		return bool(field)
+	case cadence.Bytes:
+		return []byte(field)
+	case cadence.Character:
+		return string(field)
+	case cadence.Path:
+		return field.String()
+	case *cadence.TypeValue:
+		return field.String()
+	case cadence.Enum:
+		return field.String()
+	case cadence.Function:
+		return field.FunctionType.ID()
 	default:
-		// fmt.Println("is fallthrough ", field.ToGoValue(), " ", field.String())
-
-		goValue := field.ToGoValue()
-		if goValue != nil {
-			return goValue
-		}
 		return field.String()
 	}
 }

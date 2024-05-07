@@ -22,7 +22,8 @@ func getAndUnquoteString(value cadence.Value) string {
 	if err != nil {
 		result = value.String()
 		if strings.Contains(result, "\\u") || strings.Contains(result, "\\U") {
-			result = value.ToGoValue().(string)
+			v := value.(cadence.String)
+			result = string(v)
 		}
 	}
 
