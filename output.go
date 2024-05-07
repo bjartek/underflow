@@ -155,11 +155,8 @@ func CadenceValueToInterfaceWithOption(field cadence.Value, opt Options) interfa
 	case *cadence.InclusiveRange:
 		return field.String()
 	case cadence.TypeValue:
-		// fmt.Println("is type ", field.ToGoValue(), " ", field.String())
 		return field.StaticType.ID()
 	case cadence.String:
-		return string(field)
-		// fmt.Println("is string ", field.ToGoValue(), " ", field.String())
 		value := getAndUnquoteString(field)
 		if value == "" && !opt.IncludeEmptyValues {
 			return nil
