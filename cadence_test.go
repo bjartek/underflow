@@ -75,6 +75,8 @@ func TestCadenceValueToInterface(t *testing.T) {
 	pathCap := cadence.NewCapability(1, cadenceAddress1, cadence.StringType)
 
 	structTypeValue := cadence.NewTypeValue(&structType)
+	pathCapComplex := cadence.NewCapability(1, cadenceAddress1, &structType)
+
 	stringTypeValue := cadence.NewTypeValue(&stringType)
 	ufix, _ := cadence.NewUFix64("42.0")
 	fix, _ := cadence.NewFix64("-2.0")
@@ -123,7 +125,14 @@ func TestCadenceValueToInterface(t *testing.T) {
 		{autogold.Want("EmojiDict", map[string]interface{}{"😁": "😁"}), emojiDict},
 		{autogold.Want("StoragePath", "/storage/foo"), path},
 		{autogold.Want("Event", map[string]interface{}{"foo": "foo"}), cadenceEvent},
-		{autogold.Want("PathCapablity", map[string]interface{}{"address": "0xf8d6e0586b0a20c7", "id": 1}), pathCap},
+		{autogold.Want("PathCapablity", map[string]interface{}{
+			"address": "0xf8d6e0586b0a20c7", "borrowType": "String",
+			"id": 1,
+		}), pathCap},
+		{autogold.Want("PathCapablityComplex", map[string]interface{}{
+			"address": "0xf8d6e0586b0a20c7", "borrowType": "A.f8d6e0586b0a20c7.Contract.Bar",
+			"id": 1,
+		}), pathCapComplex},
 		{autogold.Want("Resource", map[string]interface{}{"foo": "foo"}), resource},
 	}
 
@@ -394,7 +403,10 @@ func TestWrapWithComplextTypes(t *testing.T) {
 		{autogold.Want("Struct", map[string]interface{}{"<A.f8d6e0586b0a20c7.Contract.Bar>": map[string]interface{}{"foo": "Foo"}}), strct},
 		{autogold.Want("Event", map[string]interface{}{"<A.f8d6e0586b0a20c7.Contract.TestEvent>": map[string]interface{}{"foo": "Foo"}}), cadenceEvent},
 		{autogold.Want("Resource", map[string]interface{}{"<@A.f8d6e0586b0a20c7.Contract.Resource>": map[string]interface{}{"foo": "foo"}}), resource},
-		{autogold.Want("PathCap", map[string]interface{}{"<Capability<String>>": map[string]interface{}{"address": "0xf8d6e0586b0a20c7", "id": 1}}), pathCap},
+		{autogold.Want("PathCap", map[string]interface{}{"<Capability<String>>": map[string]interface{}{
+			"address": "0xf8d6e0586b0a20c7", "borrowType": "String",
+			"id": 1,
+		}}), pathCap},
 	}
 
 	for _, tc := range testCases {

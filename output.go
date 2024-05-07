@@ -141,8 +141,9 @@ func CadenceValueToInterfaceWithOption(field cadence.Value, opt Options) interfa
 		return CadenceCompostiteValueToInterfaceWithOption(field, opt, fmt.Sprintf("<Contract<%s>>", field.ContractType.ID()))
 	case cadence.Capability:
 		fields := map[string]interface{}{
-			"address": CadenceValueToInterfaceWithOption(field.Address, opt),
-			"id":      CadenceValueToInterfaceWithOption(field.ID, opt),
+			"borrowType": field.BorrowType.ID(),
+			"address":    CadenceValueToInterfaceWithOption(field.Address, opt),
+			"id":         CadenceValueToInterfaceWithOption(field.ID, opt),
 		}
 		if !opt.WrapWithComplexTypes {
 			return fields
