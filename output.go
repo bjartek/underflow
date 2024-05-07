@@ -176,9 +176,7 @@ func CadenceCompostiteValueToInterfaceWithOption(field cadence.Composite, opt Op
 	if len(fields) == 0 && !opt.IncludeEmptyValues {
 		return nil
 	}
-	if wrapper == "" {
-		return fields
-	}
+
 	if !opt.WrapWithComplexTypes {
 		return fields
 	}
