@@ -166,6 +166,7 @@ func TestParseInputValue(t *testing.T) {
 		float64(2.0),
 		interfaceString,
 		int8(8),
+		nil,
 	}
 
 	for idx, value := range values {

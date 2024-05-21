@@ -6,6 +6,7 @@ require (
 	github.com/fatih/structtag v1.2.0
 	github.com/hexops/autogold v1.3.1
 	github.com/onflow/cadence v1.0.0-preview.25
+	github.com/sanity-io/litter v1.5.5
 	github.com/stretchr/testify v1.8.4
 )
 
