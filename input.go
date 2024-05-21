@@ -60,6 +60,9 @@ func NewCadenceValue(value any) (cadence.Value, error) {
 }
 
 func ReflectToCadence(value reflect.Value, resolver InputResolver) (cadence.Value, error) {
+	if value == reflect.ValueOf(nil) {
+		return cadence.NewOptional(nil), nil
+	}
 	inputType := value.Type()
 
 	kind := inputType.Kind()
