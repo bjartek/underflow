@@ -171,7 +171,7 @@ func TestParseInputValue(t *testing.T) {
 
 	for idx, value := range values {
 		t.Run(fmt.Sprintf("parse input %d", idx), func(t *testing.T) {
-			cv, err := InputToCadence(value, func(string) (string, error) {
+			cv, err := InputToCadence(value, func(string, ResolveType) (string, error) {
 				return "", nil
 			})
 			assert.NoError(t, err)
@@ -189,7 +189,7 @@ func TestParseInputValue(t *testing.T) {
 }
 
 func TestMarshalCadenceStruct(t *testing.T) {
-	val, err := InputToCadence(Foo{Bar: "foo"}, func(string) (string, error) {
+	val, err := InputToCadence(Foo{Bar: "foo"}, func(string, ResolveType) (string, error) {
 		return "A.123.Foo.Bar", nil
 	})
 	assert.NoError(t, err)
@@ -200,7 +200,7 @@ func TestMarshalCadenceStruct(t *testing.T) {
 }
 
 func TestMarshalCadenceStructWithStructTag(t *testing.T) {
-	val, err := InputToCadence(Foo{Bar: "foo"}, func(string) (string, error) {
+	val, err := InputToCadence(Foo{Bar: "foo"}, func(string, ResolveType) (string, error) {
 		return "A.123.Foo.Baz", nil
 	})
 	assert.NoError(t, err)
@@ -212,7 +212,7 @@ func TestMarshalCadenceStructWithStructTag(t *testing.T) {
 
 // TODO: this might actually need an integration test to be useful
 func TestMarshalCadenceStructWithAddressStructTag(t *testing.T) {
-	val, err := InputToCadence(Debug_Foo2{Bar: "0xf8d6e0586b0a20c7"}, func(string) (string, error) {
+	val, err := InputToCadence(Debug_Foo2{Bar: "0xf8d6e0586b0a20c7"}, func(string, ResolveType) (string, error) {
 		return "A.123.Debug.Foo2", nil
 	})
 	assert.NoError(t, err)
@@ -240,7 +240,7 @@ func TestPrimitiveInputToCadence(t *testing.T) {
 		{name: "false", value: false},
 	}
 
-	resolver := func(string) (string, error) {
+	resolver := func(string, ResolveType) (string, error) {
 		return "", nil
 	}
 

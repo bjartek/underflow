@@ -10,6 +10,7 @@ import (
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/pkg/errors"
 )
 
 type ResolveType int
@@ -29,6 +30,11 @@ type InputResolver func(string, ResolveType) (string, error)
 var flowInterpeter, _ = interpreter.NewInterpreter(nil, nil, &interpreter.Config{})
 
 func InputToCadenceWithHint(v interface{}, typeHint sema.Type, resolver InputResolver) (cadence.Value, error) {
+	// if we are already a cadence value then we just return
+	cadenceVal, isCadenceValue := v.(cadence.Value)
+	if isCadenceValue {
+		return cadenceVal, nil
+	}
 	f := reflect.ValueOf(v)
 	return ReflectToCadenceWithTypeHint(f, typeHint, resolver)
 }
@@ -116,9 +122,10 @@ func ReflectToCadenceWithTypeHint(value reflect.Value, typeHint sema.Type, resol
 						}
 		*/
 
-		ptrValue, err := ReflectToCadenceWithTypeHint(value.Elem(), typeHint, resolver)
+		hint := typeHint.(*sema.OptionalType)
+		ptrValue, err := ReflectToCadenceWithTypeHint(value.Elem(), hint.Type, resolver)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "getting value of optional type")
 		}
 		return cadence.NewOptional(ptrValue), nil
 
@@ -128,7 +135,12 @@ func ReflectToCadenceWithTypeHint(value reflect.Value, typeHint sema.Type, resol
 		return cadence.NewBool(value.Interface().(bool)), nil
 	case reflect.String:
 		stringVal := value.Interface().(string)
-		if typeHint == sema.TheAddressType {
+		th := typeHint
+		optionalHint, isOptionalType := typeHint.(*sema.OptionalType)
+		if isOptionalType {
+			th = optionalHint.Type
+		}
+		if th == sema.TheAddressType {
 			// TODO: do we need to have different types of resolvers here?
 			result, err := resolver(stringVal, Address)
 			if err != nil {
@@ -140,11 +152,13 @@ func ReflectToCadenceWithTypeHint(value reflect.Value, typeHint sema.Type, resol
 			}
 			cadenceAddress := cadence.BytesToAddress(adr.Bytes())
 			return cadenceAddress, nil
+		} else if th == sema.StringType {
+			if len(stringVal) > 0 && !strings.HasPrefix(stringVal, "\"") {
+				stringVal = "\"" + stringVal + "\""
+			}
 		}
 
-		if len(stringVal) > 0 && !strings.HasPrefix(stringVal, "\"") {
-			stringVal = "\"" + stringVal + "\""
-		}
+		// we need to check if this is an optional string
 
 		return runtime.ParseLiteral(stringVal, typeHint, flowInterpeter)
 	case reflect.Float64:

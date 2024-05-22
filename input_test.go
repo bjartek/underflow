@@ -15,7 +15,7 @@ type InputTestCase struct {
 	typeHint sema.Type
 }
 
-var resolver = func(f string) (string, error) {
+var resolver = func(f string, resolverType ResolveType) (string, error) {
 	if f == "first" {
 		return "0x179b6b1cb6755e31", nil
 	}
@@ -83,16 +83,12 @@ func TestParseInputValueWithTypeHint(t *testing.T) {
 			typeHint: sema.TheAddressType,
 		},
 		{
-			want: autogold.Want("stringPointer", cadence.Optional{Value: cadence.Optional{
-				Value: cadence.String("foobar"),
-			}}),
+			want:     autogold.Want("stringPointer", cadence.Optional{Value: cadence.String("foobar")}),
 			input:    &stringVal,
 			typeHint: &sema.OptionalType{Type: sema.StringType},
 		},
 		{
-			want: autogold.Want("string pointer empty", cadence.Optional{Value: cadence.Optional{
-				Value: cadence.String("foobar"),
-			}}),
+			want:     autogold.Want("string pointer empty", cadence.Optional{Value: cadence.String("foobar")}),
 			input:    &stringVal,
 			typeHint: &sema.OptionalType{Type: sema.StringType},
 		},
@@ -148,6 +144,29 @@ func TestParseInputValueWithTypeHint(t *testing.T) {
 				Bar: "0x179b6b1cb6755e31",
 			},
 			typeHint: sema.InvalidType, // we will get invalid type here when trying to convert the type
+		},
+		{
+			want: autogold.Want("dict string string literal", cadence.Dictionary{
+				DictionaryType: &cadence.DictionaryType{
+					KeyType:     cadence.PrimitiveType(8),
+					ElementType: cadence.PrimitiveType(8),
+				},
+				Pairs: []cadence.KeyValuePair{
+					{
+						Key:   cadence.String("test"),
+						Value: cadence.String("foo"),
+					},
+					{
+						Key:   cadence.String("test2"),
+						Value: cadence.String("bar"),
+					},
+				},
+			}),
+			input: `{"test": "foo", "test2": "bar"}`,
+			typeHint: &sema.DictionaryType{
+				KeyType:   sema.StringType,
+				ValueType: sema.StringType,
+			},
 		},
 	}
 
