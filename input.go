@@ -12,8 +12,19 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
+type ResolveType int
+
+const (
+	Address ResolveType = iota
+	Identifier
+)
+
+func (d ResolveType) String() string {
+	return [...]string{"Address", "Identiifer"}[d]
+}
+
 // a resolver to resolve a input type into a name, can be used to resolve struct names for instance
-type InputResolver func(string) (string, error)
+type InputResolver func(string, ResolveType) (string, error)
 
 var flowInterpeter, _ = interpreter.NewInterpreter(nil, nil, &interpreter.Config{})
 
@@ -85,7 +96,7 @@ func ReflectToCadenceWithTypeHint(value reflect.Value, typeHint sema.Type, resol
 			val = append(val, cadenceVal)
 		}
 
-		resolvedIdentifier, err := resolver(inputType.Name())
+		resolvedIdentifier, err := resolver(inputType.Name(), Identifier)
 		if err != nil {
 			return nil, err
 		}
@@ -119,7 +130,7 @@ func ReflectToCadenceWithTypeHint(value reflect.Value, typeHint sema.Type, resol
 		stringVal := value.Interface().(string)
 		if typeHint == sema.TheAddressType {
 			// TODO: do we need to have different types of resolvers here?
-			result, err := resolver(stringVal)
+			result, err := resolver(stringVal, Address)
 			if err != nil {
 				return nil, err
 			}
@@ -288,7 +299,7 @@ func ReflectToCadence(value reflect.Value, resolver InputResolver) (cadence.Valu
 			val = append(val, cadenceVal)
 		}
 
-		resolvedIdentifier, err := resolver(inputType.Name())
+		resolvedIdentifier, err := resolver(inputType.Name(), Identifier)
 		if err != nil {
 			return nil, err
 		}
