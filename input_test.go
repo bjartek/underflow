@@ -26,8 +26,9 @@ var resolver = func(f string, resolverType ResolveType) (string, error) {
 }
 
 var (
-	stringVal  = "foobar"
-	structType = cadence.StructType{
+	stringVal      = "foobar"
+	stringValBlank = ""
+	structType     = cadence.StructType{
 		Fields: []cadence.Field{{
 			Identifier: "bar",
 			Type:       cadence.StringType,
@@ -90,6 +91,13 @@ func TestParseInputValueWithTypeHint(t *testing.T) {
 			input:    &stringVal,
 			typeHint: &sema.OptionalType{Type: sema.StringType},
 		},
+
+		{
+			want:     autogold.Want("stringPointerblank", cadence.Optional{Value: cadence.String("")}),
+			input:    &stringValBlank,
+			typeHint: &sema.OptionalType{Type: sema.StringType},
+		},
+
 		{
 			want:     autogold.Want("bool", cadence.Bool(true)),
 			input:    true,

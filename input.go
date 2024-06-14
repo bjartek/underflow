@@ -117,7 +117,8 @@ func ReflectToCadenceWithTypeHint(value reflect.Value, typeHint sema.Type, resol
 		hint := typeHint.(*sema.OptionalType)
 		ptrValue, err := ReflectToCadenceWithTypeHint(value.Elem(), hint.Type, resolver)
 		if err != nil {
-			return nil, errors.Wrap(err, "getting value of optional type")
+			fmt.Println(err)
+			return nil, errors.Wrapf(err, "getting value of optional type value=%s, hint=%s", value.Elem(), hint.Type)
 		}
 		return cadence.NewOptional(ptrValue), nil
 
@@ -127,6 +128,10 @@ func ReflectToCadenceWithTypeHint(value reflect.Value, typeHint sema.Type, resol
 		return cadence.NewBool(value.Interface().(bool)), nil
 	case reflect.String:
 		stringVal := value.Interface().(string)
+
+		if stringVal == "" {
+			return cadence.String(""), nil
+		}
 		th := typeHint
 		optionalHint, isOptionalType := typeHint.(*sema.OptionalType)
 		if isOptionalType {
