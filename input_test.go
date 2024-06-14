@@ -1,11 +1,14 @@
 package underflow
 
 import (
+	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/hexops/autogold"
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -177,39 +180,39 @@ func TestParseInputValueWithTypeHint(t *testing.T) {
 			tc.want.Equal(t, val)
 		})
 	}
-		foo := "foo"
+	foo := "foo"
 
-		var interfaceString interface{} = "foo"
-		var strPointer *string = nil
-		values := []interface{}{
-			"foo",
-			uint64(42),
-			map[string]uint64{"foo": uint64(42)},
-			[]uint64{42, 69},
-			[2]string{"foo", "bar"},
-			&foo,
-			strPointer,
-			float64(2.0),
-			interfaceString,
-			int8(8),
-			nil,
-		}
+	var interfaceString interface{} = "foo"
+	var strPointer *string = nil
+	values := []interface{}{
+		"foo",
+		uint64(42),
+		map[string]uint64{"foo": uint64(42)},
+		[]uint64{42, 69},
+		[2]string{"foo", "bar"},
+		&foo,
+		strPointer,
+		float64(2.0),
+		interfaceString,
+		int8(8),
+		nil,
+	}
 
-		for idx, value := range values {
-			t.Run(fmt.Sprintf("parse input %d", idx), func(t *testing.T) {
-				cv, err := InputToCadence(value, func(string) (string, error) {
-					return "", nil
-				})
-				assert.NoError(t, err)
-				v := CadenceValueToInterface(cv)
-
-				vj, err := json.Marshal(v)
-				assert.NoError(t, err)
-
-				cvj, err := json.Marshal(value)
-				assert.NoError(t, err)
-
-				assert.Equal(t, string(cvj), string(vj))
+	for idx, value := range values {
+		t.Run(fmt.Sprintf("parse input %d", idx), func(t *testing.T) {
+			cv, err := InputToCadence(value, func(string, ResolveType) (string, error) {
+				return "", nil
 			})
-		}
+			assert.NoError(t, err)
+			v := CadenceValueToInterface(cv)
+
+			vj, err := json.Marshal(v)
+			assert.NoError(t, err)
+
+			cvj, err := json.Marshal(value)
+			assert.NoError(t, err)
+
+			assert.Equal(t, string(cvj), string(vj))
+		})
+	}
 }
