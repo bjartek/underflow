@@ -91,11 +91,6 @@ func TestParseInputValueWithTypeHint(t *testing.T) {
 			typeHint: &sema.OptionalType{Type: sema.StringType},
 		},
 		{
-			want:     autogold.Want("string pointer empty", cadence.Optional{Value: cadence.String("foobar")}),
-			input:    &stringVal,
-			typeHint: &sema.OptionalType{Type: sema.StringType},
-		},
-		{
 			want:     autogold.Want("bool", cadence.Bool(true)),
 			input:    true,
 			typeHint: sema.BoolType,

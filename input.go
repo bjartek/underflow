@@ -30,7 +30,6 @@ type InputResolver func(string, ResolveType) (string, error)
 var flowInterpeter, _ = interpreter.NewInterpreter(nil, nil, &interpreter.Config{})
 
 func InputToCadenceWithHint(v interface{}, typeHint sema.Type, resolver InputResolver) (cadence.Value, error) {
-	
 	cadenceVal, isCadenceValue := v.(cadence.Value)
 	if isCadenceValue {
 		return cadenceVal, nil
@@ -52,7 +51,7 @@ func ReflectToCadenceWithTypeHint(value reflect.Value, typeHint sema.Type, resol
 		fields := []cadence.Field{}
 		for i := 0; i < value.NumField(); i++ {
 			fieldValue := value.Field(i)
-			// dont know how to have a sema.TypeHint here
+			// We do not have type hint here so we have to just revert to the method without it
 			cadenceVal, err := ReflectToCadence(fieldValue, resolver)
 			if err != nil {
 				return nil, err
@@ -115,13 +114,6 @@ func ReflectToCadenceWithTypeHint(value reflect.Value, typeHint sema.Type, resol
 		return structValue, nil
 
 	case reflect.Pointer:
-		/*
-			*  //not sure when this will fire?
-						if value.IsNil() {
-							return cadence.NewOptional(nil), nil
-						}
-		*/
-
 		hint := typeHint.(*sema.OptionalType)
 		ptrValue, err := ReflectToCadenceWithTypeHint(value.Elem(), hint.Type, resolver)
 		if err != nil {
@@ -156,7 +148,6 @@ func ReflectToCadenceWithTypeHint(value reflect.Value, typeHint sema.Type, resol
 				stringVal = "\"" + stringVal + "\""
 			}
 		}
-
 
 		return runtime.ParseLiteral(stringVal, typeHint, flowInterpeter)
 	case reflect.Float64:
