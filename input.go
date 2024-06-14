@@ -141,7 +141,6 @@ func ReflectToCadenceWithTypeHint(value reflect.Value, typeHint sema.Type, resol
 			th = optionalHint.Type
 		}
 		if th == sema.TheAddressType {
-			// TODO: do we need to have different types of resolvers here?
 			result, err := resolver(stringVal, Address)
 			if err != nil {
 				return nil, err
