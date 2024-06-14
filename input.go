@@ -157,7 +157,6 @@ func ReflectToCadenceWithTypeHint(value reflect.Value, typeHint sema.Type, resol
 			}
 		}
 
-		// we need to check if this is an optional string
 
 		return runtime.ParseLiteral(stringVal, typeHint, flowInterpeter)
 	case reflect.Float64:
