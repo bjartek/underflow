@@ -30,7 +30,7 @@ type InputResolver func(string, ResolveType) (string, error)
 var flowInterpeter, _ = interpreter.NewInterpreter(nil, nil, &interpreter.Config{})
 
 func InputToCadenceWithHint(v interface{}, typeHint sema.Type, resolver InputResolver) (cadence.Value, error) {
-	// if we are already a cadence value then we just return
+	
 	cadenceVal, isCadenceValue := v.(cadence.Value)
 	if isCadenceValue {
 		return cadenceVal, nil
