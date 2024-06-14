@@ -177,7 +177,6 @@ func TestParseInputValueWithTypeHint(t *testing.T) {
 			tc.want.Equal(t, val)
 		})
 	}
-	/*
 		foo := "foo"
 
 		var interfaceString interface{} = "foo"
@@ -213,5 +212,4 @@ func TestParseInputValueWithTypeHint(t *testing.T) {
 				assert.Equal(t, string(cvj), string(vj))
 			})
 		}
-	*/
 }
