@@ -8,7 +8,6 @@ require (
 	github.com/onflow/cadence v1.0.0-preview.25
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.8.4
-	github.com/zeebo/assert v1.3.0
 )
 
 require (
