@@ -25,25 +25,26 @@ func TestCadenceValueToInterface(t *testing.T) {
 	bar := cadenceString("bar")
 	emptyString := cadenceString("")
 
-	emptyStrct := cadence.NewStruct([]cadence.Value{emptyString}).WithType(&cadence.StructType{
-		Fields: []cadence.Field{{
-			Identifier: "foo",
-			Type:       cadence.StringType,
-		}},
-	},
-	)
+	emptyLocation := common.NewStringLocation(nil, "")
+
+	fooStringStructType := cadence.NewStructType(emptyLocation, "", []cadence.Field{{
+		Identifier: "foo",
+		Type:       cadence.StringType,
+	}}, nil)
+
+	emptyStrct := cadence.NewStruct([]cadence.Value{emptyString}).WithType(fooStringStructType)
 
 	address1, _ := hex.DecodeString("f8d6e0586b0a20c7")
 	caddress1, _ := common.BytesToAddress(address1)
-	structType := cadence.StructType{
-		Location:            common.NewAddressLocation(nil, caddress1, ""),
-		QualifiedIdentifier: "Contract.Bar",
-		Fields: []cadence.Field{{
+	structType := cadence.NewStructType(
+		common.NewAddressLocation(nil, caddress1, ""),
+		"Contract.Bar",
+		[]cadence.Field{{
 			Identifier: "foo",
 			Type:       cadence.StringType,
-		}},
-	}
-	strct := cadence.NewStruct([]cadence.Value{bar}).WithType(&structType)
+		}}, nil)
+
+	strct := cadence.NewStruct([]cadence.Value{bar}).WithType(structType)
 
 	dict := cadence.NewDictionary([]cadence.KeyValuePair{{Key: foo, Value: bar}})
 
@@ -52,30 +53,26 @@ func TestCadenceValueToInterface(t *testing.T) {
 
 	cadenceAddress1 := cadence.BytesToAddress(address1)
 
-	cadenceEvent := cadence.NewEvent([]cadence.Value{foo}).WithType(&cadence.EventType{
-		QualifiedIdentifier: "TestEvent",
-		Fields: []cadence.Field{{
+	cadenceEvent := cadence.NewEvent([]cadence.Value{foo}).WithType(cadence.NewEventType(emptyLocation,
+		"TestEvent",
+		[]cadence.Field{{
 			Type:       cadence.StringType,
 			Identifier: "foo",
-		}},
-	},
-	)
+		}}, nil))
 
-	resource := cadence.NewResource([]cadence.Value{foo}).WithType(&cadence.ResourceType{
-		Location:            common.NewAddressLocation(nil, caddress1, ""),
-		QualifiedIdentifier: "Contract.Resource",
-		Fields: []cadence.Field{{
-			Identifier: "foo",
-			Type:       cadence.StringType,
-		}},
-	})
+	resource := cadence.NewResource([]cadence.Value{foo}).WithType(
+		cadence.NewResourceType(common.NewAddressLocation(nil, caddress1, ""), "Contract.Resource",
+			[]cadence.Field{{
+				Identifier: "foo",
+				Type:       cadence.StringType,
+			}}, nil))
 
 	stringType := cadence.StringType
 	path := cadence.Path{Domain: common.PathDomainStorage, Identifier: "foo"}
 	pathCap := cadence.NewCapability(1, cadenceAddress1, cadence.StringType)
 
-	structTypeValue := cadence.NewTypeValue(&structType)
-	pathCapComplex := cadence.NewCapability(1, cadenceAddress1, &structType)
+	structTypeValue := cadence.NewTypeValue(structType)
+	pathCapComplex := cadence.NewCapability(1, cadenceAddress1, structType)
 
 	stringTypeValue := cadence.NewTypeValue(&stringType)
 	ufix, _ := cadence.NewUFix64("42.0")
@@ -259,6 +256,8 @@ func TestExtractAddresses(t *testing.T) {
 	require.NoError(t, err)
 	address := *address1
 
+	emptyLocation := common.NewStringLocation(nil, "")
+
 	address2Ptr, err := hexToAddress("01cf0e2f2f715450")
 	require.NoError(t, err)
 	address2 := *address2Ptr
@@ -274,14 +273,15 @@ func TestExtractAddresses(t *testing.T) {
 
 	array := cadence.NewArray([]cadence.Value{address, address2})
 
-	structType := cadence.StructType{
-		QualifiedIdentifier: "Contract.Bar",
-		Fields: []cadence.Field{{
+	structType := cadence.NewStructType(
+		emptyLocation,
+		"Contract.Bar",
+		[]cadence.Field{{
 			Identifier: "owner",
 			Type:       cadence.AddressType,
-		}},
-	}
-	strct := cadence.NewStruct([]cadence.Value{address}).WithType(&structType)
+		}}, nil)
+
+	strct := cadence.NewStruct([]cadence.Value{address}).WithType(structType)
 	testCases := []CadenceTest{
 		{autogold.Want("Address", []string{"0xf8d6e0586b0a20c7"}), address},
 		{autogold.Want("OptAddress", []string{"0xf8d6e0586b0a20c7"}), opt},
@@ -299,26 +299,26 @@ func TestExtractAddresses(t *testing.T) {
 }
 
 func TestIncludeEmptyValues(t *testing.T) {
+	emptyLocation := common.NewStringLocation(nil, "")
 	dict := cadence.NewDictionary([]cadence.KeyValuePair{{Key: cadenceString("foo"), Value: cadenceString("")}})
 	array := cadence.NewArray([]cadence.Value{cadenceString("foo"), cadenceString(""), cadenceString("bar")})
-	structType := cadence.StructType{
-		QualifiedIdentifier: "Contract.Bar",
-		Fields: []cadence.Field{{
+	structType := cadence.NewStructType(
+		emptyLocation,
+		"Contract.Bar",
+		[]cadence.Field{{
 			Identifier: "foo",
 			Type:       cadence.StringType,
-		}},
-	}
+		}}, nil)
 
-	strct := cadence.NewStruct([]cadence.Value{cadenceString("")}).WithType(&structType)
+	strct := cadence.NewStruct([]cadence.Value{cadenceString("")}).WithType(structType)
 
-	cadenceEvent := cadence.NewEvent([]cadence.Value{cadenceString("")}).WithType(&cadence.EventType{
-		QualifiedIdentifier: "TestEvent",
-		Fields: []cadence.Field{{
+	cadenceEvent := cadence.NewEvent([]cadence.Value{cadenceString("")}).WithType(cadence.NewEventType(
+		emptyLocation,
+		"TestEvent",
+		[]cadence.Field{{
 			Type:       cadence.StringType,
 			Identifier: "foo",
-		}},
-	},
-	)
+		}}, nil))
 
 	testCases := []CadenceTest{
 		{autogold.Want("Dict", map[string]interface{}{"foo": ""}), dict},
@@ -366,36 +366,32 @@ func TestUseStringsForFixedNumbers(t *testing.T) {
 func TestWrapWithComplextTypes(t *testing.T) {
 	address1, _ := hex.DecodeString("f8d6e0586b0a20c7")
 	caddress1, _ := common.BytesToAddress(address1)
-	structType := cadence.StructType{
-		Location:            common.NewAddressLocation(nil, caddress1, ""),
-		QualifiedIdentifier: "Contract.Bar",
-		Fields: []cadence.Field{{
+	structType := cadence.NewStructType(
+		common.NewAddressLocation(nil, caddress1, ""),
+		"Contract.Bar",
+		[]cadence.Field{{
 			Identifier: "foo",
 			Type:       cadence.StringType,
-		}},
-	}
-	strct := cadence.NewStruct([]cadence.Value{cadenceString("Foo")}).WithType(&structType)
+		}}, nil)
+	strct := cadence.NewStruct([]cadence.Value{cadenceString("Foo")}).WithType(structType)
 
-	cadenceEvent := cadence.NewEvent([]cadence.Value{cadenceString("Foo")}).WithType(&cadence.EventType{
-		Location:            common.NewAddressLocation(nil, caddress1, ""),
-		QualifiedIdentifier: "Contract.TestEvent",
-		Fields: []cadence.Field{{
+	cadenceEvent := cadence.NewEvent([]cadence.Value{cadenceString("Foo")}).WithType(cadence.NewEventType(
+		common.NewAddressLocation(nil, caddress1, ""),
+		"Contract.TestEvent",
+		[]cadence.Field{{
 			Type:       cadence.StringType,
 			Identifier: "foo",
-		}},
-	},
-	)
+		}}, nil))
 
 	stringType := cadence.StringType
 
-	resource := cadence.NewResource([]cadence.Value{cadenceString("foo")}).WithType(&cadence.ResourceType{
-		Location:            common.NewAddressLocation(nil, caddress1, ""),
-		QualifiedIdentifier: "Contract.Resource",
-		Fields: []cadence.Field{{
+	resource := cadence.NewResource([]cadence.Value{cadenceString("foo")}).WithType(cadence.NewResourceType(
+		common.NewAddressLocation(nil, caddress1, ""),
+		"Contract.Resource",
+		[]cadence.Field{{
 			Identifier: "foo",
 			Type:       cadence.StringType,
-		}},
-	})
+		}}, nil))
 
 	cadenceAddress1 := cadence.BytesToAddress(address1)
 	pathCap := cadence.NewCapability(1, cadenceAddress1, stringType)

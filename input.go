@@ -105,12 +105,8 @@ func ReflectToCadenceWithTypeHint(value reflect.Value, typeHint sema.Type, resol
 		if err != nil {
 			return nil, err
 		}
-		structType := cadence.StructType{
-			QualifiedIdentifier: resolvedIdentifier,
-			Fields:              fields,
-		}
-
-		structValue := cadence.NewStruct(val).WithType(&structType)
+		structType := cadence.NewStructType(nil, resolvedIdentifier, fields, nil)
+		structValue := cadence.NewStruct(val).WithType(structType)
 		return structValue, nil
 
 	case reflect.Pointer:
@@ -311,12 +307,11 @@ func ReflectToCadence(value reflect.Value, resolver InputResolver) (cadence.Valu
 		if err != nil {
 			return nil, err
 		}
-		structType := cadence.StructType{
-			QualifiedIdentifier: resolvedIdentifier,
-			Fields:              fields,
-		}
 
-		structValue := cadence.NewStruct(val).WithType(&structType)
+		// not sure on location here if it is even needed
+		structType := cadence.NewStructType(nil, resolvedIdentifier, fields, nil)
+
+		structValue := cadence.NewStruct(val).WithType(structType)
 		return structValue, nil
 
 	case reflect.Pointer:

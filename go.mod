@@ -1,11 +1,13 @@
 module github.com/bjartek/underflow
 
-go 1.20
+go 1.22
+
+toolchain go1.22.5
 
 require (
 	github.com/fatih/structtag v1.2.0
 	github.com/hexops/autogold v1.3.1
-	github.com/onflow/cadence v1.0.0-preview.25
+	github.com/onflow/cadence v1.0.0-preview.38
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.8.4
 )
@@ -28,7 +30,7 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/nightlyone/lockfile v1.0.0 // indirect
-	github.com/onflow/atree v0.6.1-0.20240429171449-cb486ceb1f9c // indirect
+	github.com/onflow/atree v0.7.0-rc.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/rogpeppe/go-internal v1.9.0 // indirect

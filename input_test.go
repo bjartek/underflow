@@ -28,18 +28,15 @@ var resolver = func(f string, resolverType ResolveType) (string, error) {
 var (
 	stringVal      = "foobar"
 	stringValBlank = ""
-	structType     = cadence.StructType{
-		Fields: []cadence.Field{{
-			Identifier: "bar",
-			Type:       cadence.StringType,
-		}},
-	}
-	structTypeAddress = cadence.StructType{
-		Fields: []cadence.Field{{
-			Identifier: "bar",
-			Type:       cadence.AddressType,
-		}},
-	}
+	structType     = cadence.NewStructType(nil, "", []cadence.Field{{
+		Identifier: "bar",
+		Type:       cadence.StringType,
+	}}, nil)
+
+	structTypeAddress = cadence.NewStructType(nil, "", []cadence.Field{{
+		Identifier: "bar",
+		Type:       cadence.AddressType,
+	}}, nil)
 )
 
 func TestParseInputValueWithTypeHint(t *testing.T) {
@@ -128,7 +125,7 @@ func TestParseInputValueWithTypeHint(t *testing.T) {
 		},
 
 		{
-			want: autogold.Want("struct", cadence.NewStruct([]cadence.Value{cadence.String("bar")}).WithType(&structType)),
+			want: autogold.Want("struct", cadence.NewStruct([]cadence.Value{cadence.String("bar")}).WithType(structType)),
 			input: Foo{
 				Bar: "bar",
 			},
@@ -144,7 +141,7 @@ func TestParseInputValueWithTypeHint(t *testing.T) {
 				117,
 				94,
 				49,
-			}}).WithType(&structTypeAddress),
+			}}).WithType(structTypeAddress),
 			),
 			input: Debug_Foo2{
 				Bar: "0x179b6b1cb6755e31",
@@ -184,9 +181,9 @@ func TestParseInputValueWithTypeHint(t *testing.T) {
 		})
 	}
 	foo := "foo"
-
 	var interfaceString interface{} = "foo"
 	var strPointer *string = nil
+
 	values := []interface{}{
 		"foo",
 		uint64(42),

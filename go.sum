@@ -56,8 +56,12 @@ github.com/nightlyone/lockfile v1.0.0 h1:RHep2cFKK4PonZJDdEl4GmkabuhbsRMgk/k3uAm
 github.com/nightlyone/lockfile v1.0.0/go.mod h1:rywoIealpdNse2r832aiD9jRk8ErCatROs6LzC841CI=
 github.com/onflow/atree v0.6.1-0.20240429171449-cb486ceb1f9c h1:Ol+qFATYiS7LfwQQKBjfLJ8z6VwzZehVrYH1JI2ssUU=
 github.com/onflow/atree v0.6.1-0.20240429171449-cb486ceb1f9c/go.mod h1:xvP61FoOs95K7IYdIYRnNcYQGf4nbF/uuJ0tHf4DRuM=
+github.com/onflow/atree v0.7.0-rc.2 h1:mZmVrl/zPlfI44EjV3FdR2QwIqT8nz1sCONUBFcML/U=
+github.com/onflow/atree v0.7.0-rc.2/go.mod h1:xvP61FoOs95K7IYdIYRnNcYQGf4nbF/uuJ0tHf4DRuM=
 github.com/onflow/cadence v1.0.0-preview.25 h1:kSmWjxmg9PS+bsk8C3j1NUTkFAl/jNrintVhlh6miM0=
 github.com/onflow/cadence v1.0.0-preview.25/go.mod h1:fGhLBbuEmv5rh48qv0ZS0tUz53gxWsHpB4dPsF09h6E=
+github.com/onflow/cadence v1.0.0-preview.38 h1:Ag3V1YCErma9ZF+eaNq602Vv2lBI3ScaMUcUOFj81GQ=
+github.com/onflow/cadence v1.0.0-preview.38/go.mod h1:jOwvPSSLTr9TvaKMs7KKiBYMmpdpNNAFxBsjMlrqVD0=
 github.com/onflow/crypto v0.25.0 h1:BeWbLsh3ZD13Ej+Uky6kg1PL1ZIVBDVX+2MVBNwqddg=
 github.com/pkg/diff v0.0.0-20210226163009-20ebb0f2a09e/go.mod h1:pJLUxLENpZxwdsKMEsNbx1VGcRFpLqf3715MtcvvzbA=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
