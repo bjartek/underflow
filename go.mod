@@ -7,7 +7,7 @@ toolchain go1.22.5
 require (
 	github.com/fatih/structtag v1.2.0
 	github.com/hexops/autogold v1.3.1
-	github.com/onflow/cadence v1.0.0-preview.38
+	github.com/onflow/cadence v1.0.0-preview.39
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.8.4
 )
