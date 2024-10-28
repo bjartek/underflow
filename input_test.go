@@ -7,7 +7,7 @@ import (
 
 	"github.com/hexops/autogold"
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/sema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
