@@ -11,6 +11,7 @@ import (
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/sema"
 	"github.com/pkg/errors"
+
 )
 
 type ResolveType int
@@ -387,6 +388,19 @@ func ReflectToCadence(value reflect.Value, resolver InputResolver) (cadence.Valu
 	}
 
 	return nil, fmt.Errorf("not supported type for now. Type : %s", inputType.Kind())
+}
+
+func IsTagCadecenAddress(tag *structtag.Tag) bool {
+	if tag == nil {
+		return false
+	}
+
+	for _, opt := range tag.Options {
+		if opt == "cadenceAddress" {
+			return true
+		}
+	}
+	return false
 }
 
 func IsTagCadecenAddress(tag *structtag.Tag) bool {
