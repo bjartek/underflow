@@ -363,6 +363,25 @@ func TestUseStringsForFixedNumbers(t *testing.T) {
 	}
 }
 
+func TestByteArrayAsHex(t *testing.T) {
+	array := cadence.NewArray([]cadence.Value{
+		cadence.NewUInt8(123), cadence.NewUInt8(125), // {}
+	})
+
+	testCases := []CadenceTest{
+		{autogold.Want("array", "0x7b7d"), array},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.want.Name(), func(t *testing.T) {
+			value := CadenceValueToInterfaceWithOption(tc.input, Options{
+				ByteArrayAsHex: true,
+			})
+			tc.want.Equal(t, value)
+		})
+	}
+}
+
 func TestWrapWithComplextTypes(t *testing.T) {
 	address1, _ := hex.DecodeString("f8d6e0586b0a20c7")
 	caddress1, _ := common.BytesToAddress(address1)

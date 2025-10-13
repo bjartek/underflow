@@ -1,6 +1,7 @@
 package underflow
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -12,12 +13,14 @@ type Options struct {
 	IncludeEmptyValues       bool
 	WrapWithComplexTypes     bool
 	UseStringForFixedNumbers bool
+	ByteArrayAsHex           bool
 }
 
 var defaultOptions = Options{
 	IncludeEmptyValues:       false,
 	WrapWithComplexTypes:     false,
 	UseStringForFixedNumbers: false,
+	ByteArrayAsHex:           false,
 }
 
 // / This method converts a cadence.Value to an json string representing that value
@@ -72,14 +75,27 @@ func CadenceValueToInterfaceWithOption(field cadence.Value, opt Options) interfa
 		return result
 	case cadence.Array:
 		var result []interface{}
+		encodeToHex := false
 		for _, item := range field.Values {
 			value := CadenceValueToInterfaceWithOption(item, opt)
+
+			if opt.ByteArrayAsHex && item.Type() == cadence.UInt8Type {
+				encodeToHex = true
+			}
 			if value != nil || opt.IncludeEmptyValues {
 				result = append(result, value)
 			}
 		}
 		if len(result) == 0 && !opt.IncludeEmptyValues {
 			return nil
+		}
+		if encodeToHex {
+			// Convert []interface{} to []byte for hex encoding
+			bytes := make([]byte, len(result))
+			for i, v := range result {
+				bytes[i] = v.(uint8)
+			}
+			return fmt.Sprintf("0x%s", hex.EncodeToString(bytes))
 		}
 		return result
 	case cadence.Int8:
