@@ -5,22 +5,27 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/onflow/cadence"
 )
 
 type Options struct {
-	IncludeEmptyValues       bool
-	WrapWithComplexTypes     bool
-	UseStringForFixedNumbers bool
-	ByteArrayAsHex           bool
+	IncludeEmptyValues         bool
+	WrapWithComplexTypes       bool
+	UseStringForFixedNumbers   bool
+	ByteArrayAsHex             bool
+	ShowUnixTimestampsAsString bool
+	TimestampFormat            string
 }
 
 var defaultOptions = Options{
-	IncludeEmptyValues:       false,
-	WrapWithComplexTypes:     false,
-	UseStringForFixedNumbers: false,
-	ByteArrayAsHex:           false,
+	IncludeEmptyValues:         false,
+	WrapWithComplexTypes:       false,
+	UseStringForFixedNumbers:   false,
+	ByteArrayAsHex:             false,
+	ShowUnixTimestampsAsString: false,
+	TimestampFormat:            "2006-01-02 15:04:05", // Default: YYYY-MM-DD HH:MM:SS
 }
 
 // / This method converts a cadence.Value to an json string representing that value
@@ -132,12 +137,27 @@ func CadenceValueToInterfaceWithOption(field cadence.Value, opt Options) interfa
 		return value
 
 	case cadence.UFix64:
+		float, _ := strconv.ParseFloat(field.String(), 64)
+
+		// Check if we should format as timestamp
+		if opt.ShowUnixTimestampsAsString {
+			// Validate if this is a reasonable unix timestamp
+			// Unix timestamps should be between 0 (1970-01-01) and 4102444800 (2100-01-01)
+			// Also check it's not negative and not too small (e.g., less than year 2000: 946684800)
+			if float >= 946684800 && float <= 4102444800 {
+				// Convert UFix64 to unix timestamp (seconds since epoch)
+				t := time.Unix(int64(float), 0).UTC()
+				// Return formatted date with actual number (no scientific notation)
+				return fmt.Sprintf("%s (%.8f)", t.Format(opt.TimestampFormat), float)
+			}
+			// If not a valid timestamp range, fall through to normal behavior
+		}
+
 		if opt.UseStringForFixedNumbers {
 			return field.String()
 		}
 		// fmt.Println("is ufix64 ", field.ToGoValue(), " ", field.String())
 
-		float, _ := strconv.ParseFloat(field.String(), 64)
 		return float
 	case cadence.Fix64:
 		if opt.UseStringForFixedNumbers {

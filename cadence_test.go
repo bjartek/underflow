@@ -463,6 +463,52 @@ type Debug_Foo struct {
 	Bar string
 }
 
+func TestShowUnixTimestampsAsString(t *testing.T) {
+	// Unix timestamp for 2024-01-15 11:10:45 UTC
+	timestamp, _ := cadence.NewUFix64("1705317045.00000000")
+	// Unix timestamp for 2023-12-25 00:00:00 UTC
+	timestamp2, _ := cadence.NewUFix64("1703462400.00000000")
+
+	testCases := []CadenceTest{
+		{autogold.Want("timestamp_default_format", "2024-01-15 11:10:45 (1705317045.00000000)"), timestamp},
+		{autogold.Want("timestamp2_default_format", "2023-12-25 00:00:00 (1703462400.00000000)"), timestamp2},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.want.Name(), func(t *testing.T) {
+			value := CadenceValueToInterfaceWithOption(tc.input, Options{
+				ShowUnixTimestampsAsString: true,
+				TimestampFormat:            "2006-01-02 15:04:05", // Go time format
+			})
+			tc.want.Equal(t, value)
+		})
+	}
+}
+
+func TestShowUnixTimestampsAsStringCustomFormat(t *testing.T) {
+	// Unix timestamp for 2024-01-15 11:10:45 UTC
+	timestamp, _ := cadence.NewUFix64("1705317045.00000000")
+
+	value := CadenceValueToInterfaceWithOption(timestamp, Options{
+		ShowUnixTimestampsAsString: true,
+		TimestampFormat:            "2006-01-02", // Only date
+	})
+
+	assert.Equal(t, "2024-01-15 (1705317045.00000000)", value)
+}
+
+func TestShowUnixTimestampsAsStringDisabled(t *testing.T) {
+	// Unix timestamp for 2024-01-15 11:10:45 UTC
+	timestamp, _ := cadence.NewUFix64("1705317045.00000000")
+
+	// Without the option, should return the raw float
+	value := CadenceValueToInterfaceWithOption(timestamp, Options{
+		ShowUnixTimestampsAsString: false,
+	})
+
+	assert.Equal(t, float64(1705317045.0), value)
+}
+
 // in Foo.Bar.Baz
 type Baz struct {
 	Something string `json:"bar"`
