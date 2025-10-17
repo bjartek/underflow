@@ -509,6 +509,86 @@ func TestShowUnixTimestampsAsStringDisabled(t *testing.T) {
 	assert.Equal(t, float64(1705317045.0), value)
 }
 
+func TestHumanReadableAddresses(t *testing.T) {
+	address1, _ := hexToAddress("f8d6e0586b0a20c7")
+	address2, _ := hexToAddress("01cf0e2f2f715450")
+
+	// Test with single address
+	value := CadenceValueToInterfaceWithOption(*address1, Options{
+		HumanReadableAddresses: map[string]string{
+			"0xf8d6e0586b0a20c7": "Alice",
+		},
+	})
+	assert.Equal(t, "Alice", value)
+
+	// Test with address not in map - should return original
+	value2 := CadenceValueToInterfaceWithOption(*address2, Options{
+		HumanReadableAddresses: map[string]string{
+			"0xf8d6e0586b0a20c7": "Alice",
+		},
+	})
+	assert.Equal(t, "0x01cf0e2f2f715450", value2)
+
+	// Test with empty map - should return original
+	value3 := CadenceValueToInterfaceWithOption(*address1, Options{
+		HumanReadableAddresses: map[string]string{},
+	})
+	assert.Equal(t, "0xf8d6e0586b0a20c7", value3)
+
+	// Test with nil map - should return original
+	value4 := CadenceValueToInterfaceWithOption(*address1, Options{})
+	assert.Equal(t, "0xf8d6e0586b0a20c7", value4)
+}
+
+func TestHumanReadableAddressesInStruct(t *testing.T) {
+	address1, _ := hexToAddress("f8d6e0586b0a20c7")
+	emptyLocation := common.NewStringLocation(nil, "")
+
+	structType := cadence.NewStructType(
+		emptyLocation,
+		"Contract.Bar",
+		[]cadence.Field{{
+			Identifier: "owner",
+			Type:       cadence.AddressType,
+		}}, nil)
+
+	strct := cadence.NewStruct([]cadence.Value{*address1}).WithType(structType)
+
+	value := CadenceValueToInterfaceWithOption(strct, Options{
+		HumanReadableAddresses: map[string]string{
+			"0xf8d6e0586b0a20c7": "Alice",
+		},
+	})
+
+	expected := map[string]interface{}{
+		"owner": "Alice",
+	}
+	assert.Equal(t, expected, value)
+}
+
+func TestHumanReadableAddressesInDictionary(t *testing.T) {
+	address1, _ := hexToAddress("f8d6e0586b0a20c7")
+	address2, _ := hexToAddress("01cf0e2f2f715450")
+
+	dict := cadence.NewDictionary([]cadence.KeyValuePair{
+		{Key: cadenceString("owner"), Value: *address1},
+		{Key: cadenceString("sender"), Value: *address2},
+	})
+
+	value := CadenceValueToInterfaceWithOption(dict, Options{
+		HumanReadableAddresses: map[string]string{
+			"0xf8d6e0586b0a20c7":   "Alice",
+			"0x01cf0e2f2f715450": "Bob",
+		},
+	})
+
+	expected := map[string]interface{}{
+		"owner":  "Alice",
+		"sender": "Bob",
+	}
+	assert.Equal(t, expected, value)
+}
+
 // in Foo.Bar.Baz
 type Baz struct {
 	Something string `json:"bar"`

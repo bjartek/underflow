@@ -17,6 +17,7 @@ type Options struct {
 	ByteArrayAsHex             bool
 	ShowUnixTimestampsAsString bool
 	TimestampFormat            string
+	HumanReadableAddresses     map[string]string
 }
 
 var defaultOptions = Options{
@@ -26,6 +27,7 @@ var defaultOptions = Options{
 	ByteArrayAsHex:             false,
 	ShowUnixTimestampsAsString: false,
 	TimestampFormat:            "2006-01-02 15:04:05", // Default: YYYY-MM-DD HH:MM:SS
+	HumanReadableAddresses:     nil,
 }
 
 // / This method converts a cadence.Value to an json string representing that value
@@ -187,6 +189,15 @@ func CadenceValueToInterfaceWithOption(field cadence.Value, opt Options) interfa
 		return map[string]interface{}{
 			fmt.Sprintf("<Capability<%s>>", field.BorrowType.ID()): fields,
 		}
+	case cadence.Address:
+		addressStr := field.String()
+		// Check if we have a human-readable name for this address
+		if opt.HumanReadableAddresses != nil {
+			if humanName, ok := opt.HumanReadableAddresses[addressStr]; ok {
+				return humanName
+			}
+		}
+		return addressStr
 	case cadence.Bool:
 		return bool(field)
 	case cadence.Bytes:
