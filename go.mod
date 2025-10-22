@@ -7,7 +7,7 @@ toolchain go1.24.4
 require (
 	github.com/fatih/structtag v1.2.0
 	github.com/hexops/autogold v1.3.1
-	github.com/onflow/cadence v1.7.1
+	github.com/onflow/cadence v1.8.1
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.11.1
 )
@@ -20,6 +20,7 @@ require (
 	github.com/fxamacker/cbor/v2 v2.8.1-0.20250402194037-6f932b086829 // indirect
 	github.com/fxamacker/circlehash v0.3.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
+	github.com/google/pprof v0.0.0-20250630185457-6e76a2b096b5 // indirect
 	github.com/hexops/gotextdiff v1.0.3 // indirect
 	github.com/hexops/valast v1.4.3 // indirect
 	github.com/k0kubun/pp/v3 v3.5.0 // indirect
