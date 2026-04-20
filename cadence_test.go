@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"math/big"
 	"testing"
 
 	"github.com/hexops/autogold"
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -24,30 +25,27 @@ func TestCadenceValueToInterface(t *testing.T) {
 	bar := cadenceString("bar")
 	emptyString := cadenceString("")
 
-	emptyStrct := cadence.Struct{
-		Fields: []cadence.Value{emptyString},
-		StructType: &cadence.StructType{
-			Fields: []cadence.Field{{
-				Identifier: "foo",
-				Type:       cadence.StringType{},
-			}},
-		},
-	}
+	emptyLocation := common.NewStringLocation(nil, "")
+
+	fooStringStructType := cadence.NewStructType(emptyLocation, "", []cadence.Field{{
+		Identifier: "foo",
+		Type:       cadence.StringType,
+	}}, nil)
+
+	emptyStrct := cadence.NewStruct([]cadence.Value{emptyString}).WithType(fooStringStructType)
 
 	address1, _ := hex.DecodeString("f8d6e0586b0a20c7")
 	caddress1, _ := common.BytesToAddress(address1)
-	structType := cadence.StructType{
-		Location:            common.NewAddressLocation(nil, caddress1, ""),
-		QualifiedIdentifier: "Contract.Bar",
-		Fields: []cadence.Field{{
+	structType := cadence.NewStructType(
+		common.NewAddressLocation(nil, caddress1, ""),
+		"Contract.Bar",
+		[]cadence.Field{{
 			Identifier: "foo",
-			Type:       cadence.StringType{},
-		}},
-	}
-	strct := cadence.Struct{
-		Fields:     []cadence.Value{bar},
-		StructType: &structType,
-	}
+			Type:       cadence.StringType,
+		}}, nil)
+
+	strct := cadence.NewStruct([]cadence.Value{bar}).WithType(structType)
+
 	dict := cadence.NewDictionary([]cadence.KeyValuePair{{Key: foo, Value: bar}})
 
 	emoji := cadenceString("😁")
@@ -55,32 +53,27 @@ func TestCadenceValueToInterface(t *testing.T) {
 
 	cadenceAddress1 := cadence.BytesToAddress(address1)
 
-	stringType := cadence.NewStringType()
-	cadenceEvent := cadence.NewEvent([]cadence.Value{foo}).WithType(&cadence.EventType{
-		QualifiedIdentifier: "TestEvent",
-		Fields: []cadence.Field{{
-			Type:       cadence.StringType{},
+	cadenceEvent := cadence.NewEvent([]cadence.Value{foo}).WithType(cadence.NewEventType(emptyLocation,
+		"TestEvent",
+		[]cadence.Field{{
+			Type:       cadence.StringType,
 			Identifier: "foo",
-		}},
-	},
-	)
+		}}, nil))
 
-	resource := cadence.Resource{
-		ResourceType: &cadence.ResourceType{
-			Location:            common.NewAddressLocation(nil, caddress1, ""),
-			QualifiedIdentifier: "Contract.Resource",
-			Fields: []cadence.Field{{
+	resource := cadence.NewResource([]cadence.Value{foo}).WithType(
+		cadence.NewResourceType(common.NewAddressLocation(nil, caddress1, ""), "Contract.Resource",
+			[]cadence.Field{{
 				Identifier: "foo",
-				Type:       cadence.StringType{},
-			}},
-		},
-		Fields: []cadence.Value{foo},
-	}
+				Type:       cadence.StringType,
+			}}, nil))
 
+	stringType := cadence.StringType
 	path := cadence.Path{Domain: common.PathDomainStorage, Identifier: "foo"}
-	pathCap := cadence.NewPathCapability(cadenceAddress1, path, stringType)
+	pathCap := cadence.NewCapability(1, cadenceAddress1, cadence.StringType)
 
-	structTypeValue := cadence.NewTypeValue(&structType)
+	structTypeValue := cadence.NewTypeValue(structType)
+	pathCapComplex := cadence.NewCapability(1, cadenceAddress1, structType)
+
 	stringTypeValue := cadence.NewTypeValue(&stringType)
 	ufix, _ := cadence.NewUFix64("42.0")
 	fix, _ := cadence.NewFix64("-2.0")
@@ -89,6 +82,13 @@ func TestCadenceValueToInterface(t *testing.T) {
 	smallfix, _ := cadence.NewFix64("-92233720368.5")
 	largefix, _ := cadence.NewFix64("92233720368.5")
 	var ui64 uint64 = math.MaxUint64
+
+	largeInt := big.NewInt(int64(2086000000001000000))
+	largeInt2 := big.NewInt(int64(1000))
+	largeInt.Mul(largeInt, largeInt2)
+
+	largeUInt := big.NewInt(-1)
+	largeUInt.Mul(largeUInt, largeInt)
 
 	testCases := []CadenceTest{
 		{autogold.Want("EmptyString", nil), cadenceString("")},
@@ -104,7 +104,9 @@ func TestCadenceValueToInterface(t *testing.T) {
 		{autogold.Want("small_fix64", float64(-9.22337203685e+10)), smallfix},
 		{autogold.Want("large_fix64", float64(9.22337203685e+10)), largefix},
 		{autogold.Want("uint32", uint32(42)), cadence.NewUInt32(42)},
-		{autogold.Want("int", 42), cadence.NewInt(42)},
+		{autogold.Want("int", "42"), cadence.NewInt(42)},
+		{autogold.Want("int_large", "2086000000001000000000"), cadence.NewIntFromBig(largeInt)},
+		{autogold.Want("uint_large", "-2086000000001000000000"), cadence.NewIntFromBig(largeUInt)},
 		{autogold.Want("string array", []interface{}{"foo", "bar"}), cadence.NewArray([]cadence.Value{foo, bar})},
 		{autogold.Want("empty array", nil), cadence.NewArray([]cadence.Value{emptyString})},
 		{autogold.Want("string array ignore empty", []interface{}{"foo", "bar"}), cadence.NewArray([]cadence.Value{foo, emptyString, bar})},
@@ -120,7 +122,14 @@ func TestCadenceValueToInterface(t *testing.T) {
 		{autogold.Want("EmojiDict", map[string]interface{}{"😁": "😁"}), emojiDict},
 		{autogold.Want("StoragePath", "/storage/foo"), path},
 		{autogold.Want("Event", map[string]interface{}{"foo": "foo"}), cadenceEvent},
-		{autogold.Want("PathCapablity", map[string]interface{}{"address": "0xf8d6e0586b0a20c7", "path": "/storage/foo"}), pathCap},
+		{autogold.Want("PathCapablity", map[string]interface{}{
+			"address": "0xf8d6e0586b0a20c7", "borrowType": "String",
+			"id": 1,
+		}), pathCap},
+		{autogold.Want("PathCapablityComplex", map[string]interface{}{
+			"address": "0xf8d6e0586b0a20c7", "borrowType": "A.f8d6e0586b0a20c7.Contract.Bar",
+			"id": 1,
+		}), pathCapComplex},
 		{autogold.Want("Resource", map[string]interface{}{"foo": "foo"}), resource},
 	}
 
@@ -152,14 +161,14 @@ func TestParseInputValue(t *testing.T) {
 		&foo,
 		strPointer,
 		float64(2.0),
-		uint(1.0),
 		interfaceString,
 		int8(8),
+		nil,
 	}
 
 	for idx, value := range values {
 		t.Run(fmt.Sprintf("parse input %d", idx), func(t *testing.T) {
-			cv, err := InputToCadence(value, func(string) (string, error) {
+			cv, err := InputToCadence(value, func(string, ResolveType) (string, error) {
 				return "", nil
 			})
 			assert.NoError(t, err)
@@ -177,7 +186,7 @@ func TestParseInputValue(t *testing.T) {
 }
 
 func TestMarshalCadenceStruct(t *testing.T) {
-	val, err := InputToCadence(Foo{Bar: "foo"}, func(string) (string, error) {
+	val, err := InputToCadence(Foo{Bar: "foo"}, func(string, ResolveType) (string, error) {
 		return "A.123.Foo.Bar", nil
 	})
 	assert.NoError(t, err)
@@ -188,7 +197,7 @@ func TestMarshalCadenceStruct(t *testing.T) {
 }
 
 func TestMarshalCadenceStructWithStructTag(t *testing.T) {
-	val, err := InputToCadence(Foo{Bar: "foo"}, func(string) (string, error) {
+	val, err := InputToCadence(Foo{Bar: "foo"}, func(string, ResolveType) (string, error) {
 		return "A.123.Foo.Baz", nil
 	})
 	assert.NoError(t, err)
@@ -200,7 +209,7 @@ func TestMarshalCadenceStructWithStructTag(t *testing.T) {
 
 // TODO: this might actually need an integration test to be useful
 func TestMarshalCadenceStructWithAddressStructTag(t *testing.T) {
-	val, err := InputToCadence(Debug_Foo2{Bar: "0xf8d6e0586b0a20c7"}, func(string) (string, error) {
+	val, err := InputToCadence(Debug_Foo2{Bar: "0xf8d6e0586b0a20c7"}, func(string, ResolveType) (string, error) {
 		return "A.123.Debug.Foo2", nil
 	})
 	assert.NoError(t, err)
@@ -212,10 +221,11 @@ func TestMarshalCadenceStructWithAddressStructTag(t *testing.T) {
 
 func TestPrimitiveInputToCadence(t *testing.T) {
 	tests := []struct {
-		name  string
 		value interface{}
+		name  string
 	}{
-		{name: "int", value: 1},
+		{name: "int", value: "1"},   // arbitrary precision
+		{name: "uint", value: "-1"}, // arbitrary precision
 		{name: "int8", value: int8(8)},
 		{name: "int16", value: int16(16)},
 		{name: "int32", value: int32(32)},
@@ -227,7 +237,7 @@ func TestPrimitiveInputToCadence(t *testing.T) {
 		{name: "false", value: false},
 	}
 
-	resolver := func(string) (string, error) {
+	resolver := func(string, ResolveType) (string, error) {
 		return "", nil
 	}
 
@@ -246,6 +256,8 @@ func TestExtractAddresses(t *testing.T) {
 	require.NoError(t, err)
 	address := *address1
 
+	emptyLocation := common.NewStringLocation(nil, "")
+
 	address2Ptr, err := hexToAddress("01cf0e2f2f715450")
 	require.NoError(t, err)
 	address2 := *address2Ptr
@@ -261,17 +273,15 @@ func TestExtractAddresses(t *testing.T) {
 
 	array := cadence.NewArray([]cadence.Value{address, address2})
 
-	structType := cadence.StructType{
-		QualifiedIdentifier: "Contract.Bar",
-		Fields: []cadence.Field{{
+	structType := cadence.NewStructType(
+		emptyLocation,
+		"Contract.Bar",
+		[]cadence.Field{{
 			Identifier: "owner",
-			Type:       cadence.AddressType{},
-		}},
-	}
-	strct := cadence.Struct{
-		Fields:     []cadence.Value{address},
-		StructType: &structType,
-	}
+			Type:       cadence.AddressType,
+		}}, nil)
+
+	strct := cadence.NewStruct([]cadence.Value{address}).WithType(structType)
 	testCases := []CadenceTest{
 		{autogold.Want("Address", []string{"0xf8d6e0586b0a20c7"}), address},
 		{autogold.Want("OptAddress", []string{"0xf8d6e0586b0a20c7"}), opt},
@@ -289,29 +299,26 @@ func TestExtractAddresses(t *testing.T) {
 }
 
 func TestIncludeEmptyValues(t *testing.T) {
+	emptyLocation := common.NewStringLocation(nil, "")
 	dict := cadence.NewDictionary([]cadence.KeyValuePair{{Key: cadenceString("foo"), Value: cadenceString("")}})
 	array := cadence.NewArray([]cadence.Value{cadenceString("foo"), cadenceString(""), cadenceString("bar")})
-	structType := cadence.StructType{
-		QualifiedIdentifier: "Contract.Bar",
-		Fields: []cadence.Field{{
+	structType := cadence.NewStructType(
+		emptyLocation,
+		"Contract.Bar",
+		[]cadence.Field{{
 			Identifier: "foo",
-			Type:       cadence.StringType{},
-		}},
-	}
+			Type:       cadence.StringType,
+		}}, nil)
 
-	strct := cadence.Struct{
-		Fields:     []cadence.Value{cadenceString("")},
-		StructType: &structType,
-	}
+	strct := cadence.NewStruct([]cadence.Value{cadenceString("")}).WithType(structType)
 
-	cadenceEvent := cadence.NewEvent([]cadence.Value{cadenceString("")}).WithType(&cadence.EventType{
-		QualifiedIdentifier: "TestEvent",
-		Fields: []cadence.Field{{
-			Type:       cadence.StringType{},
+	cadenceEvent := cadence.NewEvent([]cadence.Value{cadenceString("")}).WithType(cadence.NewEventType(
+		emptyLocation,
+		"TestEvent",
+		[]cadence.Field{{
+			Type:       cadence.StringType,
 			Identifier: "foo",
-		}},
-	},
-	)
+		}}, nil))
 
 	testCases := []CadenceTest{
 		{autogold.Want("Dict", map[string]interface{}{"foo": ""}), dict},
@@ -356,56 +363,66 @@ func TestUseStringsForFixedNumbers(t *testing.T) {
 	}
 }
 
+func TestByteArrayAsHex(t *testing.T) {
+	array := cadence.NewArray([]cadence.Value{
+		cadence.NewUInt8(123), cadence.NewUInt8(125), // {}
+	})
+
+	testCases := []CadenceTest{
+		{autogold.Want("array", "0x7b7d"), array},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.want.Name(), func(t *testing.T) {
+			value := CadenceValueToInterfaceWithOption(tc.input, Options{
+				ByteArrayAsHex: true,
+			})
+			tc.want.Equal(t, value)
+		})
+	}
+}
+
 func TestWrapWithComplextTypes(t *testing.T) {
 	address1, _ := hex.DecodeString("f8d6e0586b0a20c7")
 	caddress1, _ := common.BytesToAddress(address1)
-	structType := cadence.StructType{
-		Location:            common.NewAddressLocation(nil, caddress1, ""),
-		QualifiedIdentifier: "Contract.Bar",
-		Fields: []cadence.Field{{
+	structType := cadence.NewStructType(
+		common.NewAddressLocation(nil, caddress1, ""),
+		"Contract.Bar",
+		[]cadence.Field{{
 			Identifier: "foo",
-			Type:       cadence.StringType{},
-		}},
-	}
+			Type:       cadence.StringType,
+		}}, nil)
+	strct := cadence.NewStruct([]cadence.Value{cadenceString("Foo")}).WithType(structType)
 
-	strct := cadence.Struct{
-		Fields:     []cadence.Value{cadenceString("Foo")},
-		StructType: &structType,
-	}
-
-	cadenceEvent := cadence.NewEvent([]cadence.Value{cadenceString("Foo")}).WithType(&cadence.EventType{
-		Location:            common.NewAddressLocation(nil, caddress1, ""),
-		QualifiedIdentifier: "Contract.TestEvent",
-		Fields: []cadence.Field{{
-			Type:       cadence.StringType{},
+	cadenceEvent := cadence.NewEvent([]cadence.Value{cadenceString("Foo")}).WithType(cadence.NewEventType(
+		common.NewAddressLocation(nil, caddress1, ""),
+		"Contract.TestEvent",
+		[]cadence.Field{{
+			Type:       cadence.StringType,
 			Identifier: "foo",
-		}},
-	},
-	)
+		}}, nil))
 
-	stringType := cadence.NewStringType()
+	stringType := cadence.StringType
 
-	resource := cadence.Resource{
-		ResourceType: &cadence.ResourceType{
-			Location:            common.NewAddressLocation(nil, caddress1, ""),
-			QualifiedIdentifier: "Contract.Resource",
-			Fields: []cadence.Field{{
-				Identifier: "foo",
-				Type:       cadence.StringType{},
-			}},
-		},
-		Fields: []cadence.Value{cadenceString("foo")},
-	}
+	resource := cadence.NewResource([]cadence.Value{cadenceString("foo")}).WithType(cadence.NewResourceType(
+		common.NewAddressLocation(nil, caddress1, ""),
+		"Contract.Resource",
+		[]cadence.Field{{
+			Identifier: "foo",
+			Type:       cadence.StringType,
+		}}, nil))
 
 	cadenceAddress1 := cadence.BytesToAddress(address1)
-	path := cadence.Path{Domain: common.PathDomainStorage, Identifier: "foo"}
-	pathCap := cadence.NewPathCapability(cadenceAddress1, path, stringType)
+	pathCap := cadence.NewCapability(1, cadenceAddress1, stringType)
 
 	testCases := []CadenceTest{
 		{autogold.Want("Struct", map[string]interface{}{"<A.f8d6e0586b0a20c7.Contract.Bar>": map[string]interface{}{"foo": "Foo"}}), strct},
 		{autogold.Want("Event", map[string]interface{}{"<A.f8d6e0586b0a20c7.Contract.TestEvent>": map[string]interface{}{"foo": "Foo"}}), cadenceEvent},
 		{autogold.Want("Resource", map[string]interface{}{"<@A.f8d6e0586b0a20c7.Contract.Resource>": map[string]interface{}{"foo": "foo"}}), resource},
-		{autogold.Want("PathCap", map[string]interface{}{"<Capability<String>>": map[string]interface{}{"address": "0xf8d6e0586b0a20c7", "path": "/storage/foo"}}), pathCap},
+		{autogold.Want("PathCap", map[string]interface{}{"<Capability<String>>": map[string]interface{}{
+			"address": "0xf8d6e0586b0a20c7", "borrowType": "String",
+			"id": 1,
+		}}), pathCap},
 	}
 
 	for _, tc := range testCases {
@@ -444,6 +461,132 @@ type Debug_Foo2 struct {
 
 type Debug_Foo struct {
 	Bar string
+}
+
+func TestShowUnixTimestampsAsString(t *testing.T) {
+	// Unix timestamp for 2024-01-15 11:10:45 UTC
+	timestamp, _ := cadence.NewUFix64("1705317045.00000000")
+	// Unix timestamp for 2023-12-25 00:00:00 UTC
+	timestamp2, _ := cadence.NewUFix64("1703462400.00000000")
+
+	testCases := []CadenceTest{
+		{autogold.Want("timestamp_default_format", "2024-01-15 11:10:45 (1705317045.00000000)"), timestamp},
+		{autogold.Want("timestamp2_default_format", "2023-12-25 00:00:00 (1703462400.00000000)"), timestamp2},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.want.Name(), func(t *testing.T) {
+			value := CadenceValueToInterfaceWithOption(tc.input, Options{
+				ShowUnixTimestampsAsString: true,
+				TimestampFormat:            "2006-01-02 15:04:05", // Go time format
+			})
+			tc.want.Equal(t, value)
+		})
+	}
+}
+
+func TestShowUnixTimestampsAsStringCustomFormat(t *testing.T) {
+	// Unix timestamp for 2024-01-15 11:10:45 UTC
+	timestamp, _ := cadence.NewUFix64("1705317045.00000000")
+
+	value := CadenceValueToInterfaceWithOption(timestamp, Options{
+		ShowUnixTimestampsAsString: true,
+		TimestampFormat:            "2006-01-02", // Only date
+	})
+
+	assert.Equal(t, "2024-01-15 (1705317045.00000000)", value)
+}
+
+func TestShowUnixTimestampsAsStringDisabled(t *testing.T) {
+	// Unix timestamp for 2024-01-15 11:10:45 UTC
+	timestamp, _ := cadence.NewUFix64("1705317045.00000000")
+
+	// Without the option, should return the raw float
+	value := CadenceValueToInterfaceWithOption(timestamp, Options{
+		ShowUnixTimestampsAsString: false,
+	})
+
+	assert.Equal(t, float64(1705317045.0), value)
+}
+
+func TestHumanReadableAddresses(t *testing.T) {
+	address1, _ := hexToAddress("f8d6e0586b0a20c7")
+	address2, _ := hexToAddress("01cf0e2f2f715450")
+
+	// Test with single address
+	value := CadenceValueToInterfaceWithOption(*address1, Options{
+		HumanReadableAddresses: map[string]string{
+			"0xf8d6e0586b0a20c7": "Alice",
+		},
+	})
+	assert.Equal(t, "Alice", value)
+
+	// Test with address not in map - should return original
+	value2 := CadenceValueToInterfaceWithOption(*address2, Options{
+		HumanReadableAddresses: map[string]string{
+			"0xf8d6e0586b0a20c7": "Alice",
+		},
+	})
+	assert.Equal(t, "0x01cf0e2f2f715450", value2)
+
+	// Test with empty map - should return original
+	value3 := CadenceValueToInterfaceWithOption(*address1, Options{
+		HumanReadableAddresses: map[string]string{},
+	})
+	assert.Equal(t, "0xf8d6e0586b0a20c7", value3)
+
+	// Test with nil map - should return original
+	value4 := CadenceValueToInterfaceWithOption(*address1, Options{})
+	assert.Equal(t, "0xf8d6e0586b0a20c7", value4)
+}
+
+func TestHumanReadableAddressesInStruct(t *testing.T) {
+	address1, _ := hexToAddress("f8d6e0586b0a20c7")
+	emptyLocation := common.NewStringLocation(nil, "")
+
+	structType := cadence.NewStructType(
+		emptyLocation,
+		"Contract.Bar",
+		[]cadence.Field{{
+			Identifier: "owner",
+			Type:       cadence.AddressType,
+		}}, nil)
+
+	strct := cadence.NewStruct([]cadence.Value{*address1}).WithType(structType)
+
+	value := CadenceValueToInterfaceWithOption(strct, Options{
+		HumanReadableAddresses: map[string]string{
+			"0xf8d6e0586b0a20c7": "Alice",
+		},
+	})
+
+	expected := map[string]interface{}{
+		"owner": "Alice",
+	}
+	assert.Equal(t, expected, value)
+}
+
+func TestHumanReadableAddressesInDictionary(t *testing.T) {
+	address1, _ := hexToAddress("f8d6e0586b0a20c7")
+	address2, _ := hexToAddress("01cf0e2f2f715450")
+
+	dict := cadence.NewDictionary([]cadence.KeyValuePair{
+		{Key: cadenceString("owner"), Value: *address1},
+		{Key: cadenceString("sender"), Value: *address2},
+	})
+
+	value := CadenceValueToInterfaceWithOption(dict, Options{
+		HumanReadableAddresses: map[string]string{
+			"0xf8d6e0586b0a20c7":   "Alice",
+			"0x01cf0e2f2f715450": "Bob",
+		},
+	})
+
+	expected := map[string]interface{}{
+		"owner":  "Alice",
+		"sender": "Bob",
+	}
+	assert.Equal(t, expected, value)
 }
 
 // in Foo.Bar.Baz
